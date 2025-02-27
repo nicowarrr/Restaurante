@@ -113,7 +113,7 @@ app.get('/comandas', async (req, res) => {
         c.numero_mesa, 
         c.cantidad, 
         c.detalles,
-        c.estado
+        c.estados
       FROM 
         comanda c
       JOIN 
