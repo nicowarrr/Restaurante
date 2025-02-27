@@ -61,7 +61,7 @@ const Catalogo = () => {
                     {plato.nombre_plato}
                   </h5>
                   <p className="card-text text-muted">{plato.descripcion}</p>
-                  <p className="card-text text-muted">${plato.precio}</p>
+                  <p className="card-text text-muted">${plato.precio_unitario}</p>
                   
                 </div>
               </div>
