@@ -30,12 +30,12 @@ pool.connect()
     process.exit(1); // Salir con error si no se puede conectar
   });
 
-// Rutas API
+/* 🔹 RUTAS DE EMPLEADOS */
 
 // Obtener todos los empleados
 app.get('/empleados', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM empleados ORDER BY id_empleado ASC');
+    const result = await pool.query('SELECT * FROM empleado ORDER BY id_empleado ASC');
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -43,13 +43,13 @@ app.get('/empleados', async (req, res) => {
   }
 });
 
-//Agregar un nuevo empleado
+// Agregar un nuevo empleado
 app.post('/empleados', async (req, res) => {
-  const { nombre, apellido, edad, telefono, correo, cargo } = req.body;
+  const { nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo } = req.body;
   try {
     const result = await pool.query(
-      'INSERT INTO empleados (nombre, apellido, edad, telefono, correo, cargo) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [nombre, apellido, edad, telefono, correo, cargo]
+      'INSERT INTO empleado (nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+      [nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -61,22 +61,21 @@ app.post('/empleados', async (req, res) => {
 // Actualizar un empleado existente
 app.patch('/empleados/:id_empleado', async (req, res) => {
   const { id_empleado } = req.params;
-  const { nombre, apellido, edad, telefono, correo, cargo } = req.body;
-
-  const edadInt = parseInt(edad, 10);
+  const { nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo } = req.body;
 
   try {
     const result = await pool.query(
-      `UPDATE empleados
+      `UPDATE empleado
        SET nombre = $1,
            apellido = $2,
            edad = $3,
-           telefono = $4,
-           correo = $5,
-           cargo = $6
-       WHERE id_empleado = $7
+           fecha_nacimiento = $4,
+           telefono = $5,
+           correo = $6,
+           cargo = $7
+       WHERE id_empleado = $8
        RETURNING *`,
-      [nombre, apellido, edadInt, telefono, correo, cargo, id_empleado]
+      [nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo, id_empleado]
     );
 
     if (result.rowCount === 0) {
