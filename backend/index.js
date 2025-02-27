@@ -35,7 +35,7 @@ pool.connect()
 // Obtener todos los empleados
 app.get('/empleados', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM empleados ORDER BY id_empleado ASC');
+    const result = await pool.query('SELECT * FROM empleado ORDER BY id_empleado ASC');
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -45,11 +45,11 @@ app.get('/empleados', async (req, res) => {
 
 //Agregar un nuevo empleado
 app.post('/empleados', async (req, res) => {
-  const { nombre, apellido, edad, telefono, correo, cargo } = req.body;
+  const { nombre, apellido, edad, fecha_nacimiento, fecha_contratacion, telefono, correo, cargo } = req.body;
   try {
     const result = await pool.query(
-      'INSERT INTO empleados (nombre, apellido, edad, telefono, correo, cargo) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [nombre, apellido, edad, telefono, correo, cargo]
+      'INSERT INTO empleado (nombre, apellido, edad, fecha_nacimiento, fecha_contratacion, telefono, correo, cargo) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+      [nombre, apellido, edad, fecha_nacimiento, fecha_contratacion, telefono, correo, cargo]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -61,22 +61,17 @@ app.post('/empleados', async (req, res) => {
 // Actualizar un empleado existente
 app.patch('/empleados/:id_empleado', async (req, res) => {
   const { id_empleado } = req.params;
-  const { nombre, apellido, edad, telefono, correo, cargo } = req.body;
-
-  const edadInt = parseInt(edad, 10);
+  const {telefono, correo, cargo } = req.body;
 
   try {
     const result = await pool.query(
-      `UPDATE empleados
-       SET nombre = $1,
-           apellido = $2,
-           edad = $3,
-           telefono = $4,
-           correo = $5,
-           cargo = $6
-       WHERE id_empleado = $7
+      `UPDATE empleado
+       SET telefono = $1,
+           correo = $2,
+           cargo = $3,
+       WHERE id_empleado = $4
        RETURNING *`,
-      [nombre, apellido, edadInt, telefono, correo, cargo, id_empleado]
+      [telefono, correo, cargo, id_empleado]
     );
 
     if (result.rowCount === 0) {
@@ -106,20 +101,23 @@ app.get('/comandas', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT 
-        c.id_numero_orden, 
-        m.nombre_plato, 
-        e.nombre AS nombre_empleado, 
-        c.fecha_pedido, 
-        c.numero_mesa, 
-        c.cantidad, 
-        c.detalles,
-        c.estado
+        c.id_numero_orden,
+        e.nombre AS nombre_empleado,
+        mn.nombre_plato,
+        ms.numero AS numero_mesa,
+        d.cantidad,
+        c.fecha_pedido,
+        c.fecha_entrega
       FROM 
         comanda c
       JOIN 
-        menu m ON c.id_plato = m.id_plato
-      JOIN 
-        empleados e ON c.id_empleado = e.id_empleado`
+        empleado e ON c.id_empleado = e.id_empleado
+      JOIN
+        detalle d ON c.id_numero_orden = d.id_numero_orden
+      JOIN
+        menu mn ON d.id_plato = mn.id_plato
+      JOIN
+        mesa ms ON c.id_mesa = ms.id_mesa`
     );
     res.json(result.rows);
   } catch (err) {
@@ -131,18 +129,18 @@ app.get('/comandas', async (req, res) => {
 //Agregar nueva comanda
 
 app.post('/comandas', async (req, res) => {
-  const { id_numero_comanda, id_plato, id_empleado, numero_mesa, cantidad, detalles } = req.body;
+  const { id_plato, id_empleado, numero_mesa, cantidad, detalles } = req.body;
   try {
-    const query = 
-    `INSERT INTO comanda (id_numero_comanda ,id_plato, id_empleado, fecha_pedido, numero_mesa, cantidad, detalles, id_numero_orden) 
-    VALUES ($1, $2, CURRENT_TIMESTAMP - INTERVAL '3 hours', $3, $4, $5, $6) 
-    RETURNING *;`;
-    
+
+    const query = `
+    INSERT INTO comanda (id_numero_orden, id_empleado, id_mesa, id_estado, fecha_pedido, fecha_entrega) 
+    VALUES ($1, $2, $3, $4,  CURRENT_TIMESTAMP - INTERVAL '3 hours', $6) 
+    RETURNING *;
+  `;
     const result = await pool.query(
-      query,
-      [id_numero_comanda, id_plato, id_empleado, numero_mesa, cantidad, detalles, id_numero_orden]
+     query,
+      [id_plato, id_empleado, numero_mesa, cantidad, detalles]
     );
-    
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error(err);
@@ -256,6 +254,50 @@ app.get('/reporte/ventas-totales', async (req, res) => {
   } catch (err) {
     console.error("Error obteniendo ventas totales:", err);
     res.status(500).send("Error al obtener las ventas totales");
+  }
+});
+
+app.get('/mesa', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM mesa ORDER BY id_mesa ASC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al obtener mesas');
+  }
+});
+
+app.post('/mesa', async (req, res) => {
+  const { numero, capacidad } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO mesa (numero, capacidad) VALUES ($1, $2) RETURNING *',
+      [numero, capacidad]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al agregar la mesa');
+  }
+});
+
+app.get('/estado', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM estado ORDER BY id_estado ASC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al obtener estados');
+  }
+});
+
+app.get('/detalle', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM detalle ORDER BY id_detalle ASC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al obtener detalles');
   }
 });
 
