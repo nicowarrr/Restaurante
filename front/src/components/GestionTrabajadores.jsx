@@ -28,7 +28,7 @@ const GestionTrabajadores = () => {
 
   const getEmpleados = async () => {
     try {
-      const response = await Axios.get("http://localhost:5001/empleados");
+      const response = await Axios.get("http://localhost:5001/empleados1");
       if (response.status === 200) {
         setEmpleados(response.data);
       }
@@ -61,39 +61,59 @@ const GestionTrabajadores = () => {
   };
 
   const addEmpleado = async () => {
-    if (!nombre || !apellido || !fechaNacimiento || !telefono || !correo || !cargo) {
-        Swal.fire("Error", "Todos los campos son obligatorios.", "error");
-        return;
+    if (
+      !nombre ||
+      !apellido ||
+      !fechaNacimiento ||
+      !telefono ||
+      !correo ||
+      !cargo
+    ) {
+      Swal.fire("Error", "Todos los campos son obligatorios.", "error");
+      return;
     }
 
     const nuevoEmpleado = {
-        nombre,
-        apellido,
-        edad: calcularEdad(fechaNacimiento),  // Calcula la edad correctamente
-        fecha_nacimiento: fechaNacimiento,
-        telefono,
-        correo,
-        cargo,
+      nombre,
+      apellido,
+      edad: calcularEdad(fechaNacimiento), // Calcula la edad correctamente
+      fecha_nacimiento: fechaNacimiento,
+      telefono,
+      correo,
+      cargo,
     };
 
     console.log("Datos enviados al servidor:", nuevoEmpleado); // Para depuración
 
     try {
-        const response = await Axios.post("http://localhost:5001/empleados", nuevoEmpleado);
-        if (response.status === 201) {
-            await getEmpleados();
-            limpiarDatos();
-            Swal.fire("Empleado registrado", "El empleado fue registrado con éxito", "success");
-        }
+      const response = await Axios.post(
+        "http://localhost:5001/empleados",
+        nuevoEmpleado
+      );
+      if (response.status === 201) {
+        await getEmpleados();
+        limpiarDatos();
+        Swal.fire(
+          "Empleado registrado",
+          "El empleado fue registrado con éxito",
+          "success"
+        );
+      }
     } catch (error) {
-        console.error("Error al agregar empleado:", error);
-        Swal.fire("Error", "No se logró registrar el empleado.", "error");
+      console.error("Error al agregar empleado:", error);
+      Swal.fire("Error", "No se logró registrar el empleado.", "error");
     }
-};
-
+  };
 
   const updateEmpleado = async () => {
-    if (!nombre || !apellido || !fechaNacimiento || !telefono || !correo || !cargo) {
+    if (
+      !nombre ||
+      !apellido ||
+      !fechaNacimiento ||
+      !telefono ||
+      !correo ||
+      !cargo
+    ) {
       Swal.fire("Error", "Todos los campos son obligatorios.", "error");
       return;
     }
@@ -109,11 +129,18 @@ const GestionTrabajadores = () => {
         cargo,
       };
 
-      const response = await Axios.patch(`http://localhost:5001/empleados/${id}`, datosParaActualizar);
+      const response = await Axios.patch(
+        `http://localhost:5001/empleados/${id}`,
+        datosParaActualizar
+      );
       if (response.status === 200) {
         await getEmpleados();
         limpiarDatos();
-        Swal.fire("Actualización exitosa", `El empleado ${nombre} fue actualizado con éxito`, "success");
+        Swal.fire(
+          "Actualización exitosa",
+          `El empleado ${nombre} fue actualizado con éxito`,
+          "success"
+        );
       }
     } catch (error) {
       console.error("Error al actualizar empleado:", error);
@@ -132,31 +159,74 @@ const GestionTrabajadores = () => {
             <div className="row g-3">
               <div className="col-md-6">
                 <label className="form-label fw-bold">Nombre</label>
-                <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} className="form-control" placeholder="Ingrese un Nombre" />
+                <input
+                  type="text"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  className="form-control"
+                  placeholder="Ingrese un Nombre"
+                />
               </div>
               <div className="col-md-6">
                 <label className="form-label fw-bold">Apellido</label>
-                <input type="text" value={apellido} onChange={(e) => setApellido(e.target.value)} className="form-control" placeholder="Ingrese un Apellido" />
+                <input
+                  type="text"
+                  value={apellido}
+                  onChange={(e) => setApellido(e.target.value)}
+                  className="form-control"
+                  placeholder="Ingrese un Apellido"
+                />
               </div>
               <div className="col-md-6">
-                <label className="form-label fw-bold">Fecha de Nacimiento</label>
-                <input type="date" value={fechaNacimiento} onChange={(e) => { setFechaNacimiento(e.target.value); setEdad(calcularEdad(e.target.value)); }} className="form-control" />
+                <label className="form-label fw-bold">
+                  Fecha de Nacimiento
+                </label>
+                <input
+                  type="date"
+                  value={fechaNacimiento}
+                  onChange={(e) => {
+                    setFechaNacimiento(e.target.value);
+                    setEdad(calcularEdad(e.target.value));
+                  }}
+                  className="form-control"
+                />
               </div>
               <div className="col-md-6">
                 <label className="form-label fw-bold">Edad</label>
-                <input type="number" value={edad} readOnly className="form-control" />
+                <input
+                  type="number"
+                  value={edad}
+                  readOnly
+                  className="form-control"
+                />
               </div>
               <div className="col-md-6">
                 <label className="form-label fw-bold">Teléfono</label>
-                <input type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)} className="form-control" placeholder="Ingrese un Teléfono" />
+                <input
+                  type="text"
+                  value={telefono}
+                  onChange={(e) => setTelefono(e.target.value)}
+                  className="form-control"
+                  placeholder="Ingrese un Teléfono"
+                />
               </div>
               <div className="col-md-6">
                 <label className="form-label fw-bold">Correo</label>
-                <input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} className="form-control" placeholder="Ingrese un Correo" />
+                <input
+                  type="email"
+                  value={correo}
+                  onChange={(e) => setCorreo(e.target.value)}
+                  className="form-control"
+                  placeholder="Ingrese un Correo"
+                />
               </div>
               <div className="col-md-6">
                 <label className="form-label fw-bold">Cargo</label>
-                <select value={cargo} onChange={(e) => setCargo(e.target.value)} className="form-select">
+                <select
+                  value={cargo}
+                  onChange={(e) => setCargo(e.target.value)}
+                  className="form-select"
+                >
                   <option value="">Seleccione un Cargo</option>
                   <option value="Mesero">Mesero</option>
                   <option value="Chef">Chef</option>
@@ -168,9 +238,13 @@ const GestionTrabajadores = () => {
         </div>
         <div className="card-footer text-center">
           {editar ? (
-            <button onClick={updateEmpleado} className="btn btn-success">Actualizar</button>
+            <button onClick={updateEmpleado} className="btn btn-success">
+              Actualizar
+            </button>
           ) : (
-            <button onClick={addEmpleado} className="btn btn-success">Registrar</button>
+            <button onClick={addEmpleado} className="btn btn-success">
+              Registrar
+            </button>
           )}
         </div>
         <div className="card-body">
@@ -199,9 +273,33 @@ const GestionTrabajadores = () => {
                     <td>{empleado.telefono}</td>
                     <td>{empleado.correo}</td>
                     <td>{empleado.cargo}</td>
-                    <td>{empleado.fecha_contratacion}</td>
                     <td>
-                      <button className="btn btn-outline-info btn-sm" onClick={() => { setEditar(true); setId(empleado.id_empleado); setNombre(empleado.nombre); setApellido(empleado.apellido); setEdad(empleado.edad); setTelefono(empleado.telefono); setCorreo(empleado.correo); setCargo(empleado.cargo); }}>
+                      {empleado.fecha_contratacion
+                        ? new Date(
+                            empleado.fecha_contratacion
+                          ).toLocaleDateString("es-ES")
+                        : "No disponible"}
+                    </td>
+
+                    <td>
+                      <button
+                        className="btn btn-outline-info btn-sm"
+                        onClick={() => {
+                          setEditar(true);
+                          setId(empleado.id_empleado);
+                          setNombre(empleado.nombre);
+                          setApellido(empleado.apellido);
+                          setEdad(empleado.edad);
+                          setTelefono(empleado.telefono);
+                          setCorreo(empleado.correo);
+                          setCargo(empleado.cargo);
+                          setFechaNacimiento(
+                            empleado.fecha_nacimiento
+                              ? empleado.fecha_nacimiento.split("T")[0]
+                              : ""
+                          ); // Corregido
+                        }}
+                      >
                         Editar
                       </button>
                     </td>

@@ -302,6 +302,19 @@ app.get("/reporte/ventas-totales", async (req, res) => {
   }
 });
 
+app.get("/empleados1", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id_empleado, nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo, 
+      TO_CHAR(fecha_contratacion, 'YYYY-MM-DD') AS fecha_contratacion FROM empleado ORDER BY id_empleado ASC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error al obtener empleados");
+  }
+});
+
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);
 });
