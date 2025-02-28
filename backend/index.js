@@ -44,17 +44,34 @@ app.get('/empleados', async (req, res) => {
 });
 
 //Agregar un nuevo empleado
-app.post('/empleados', async (req, res) => {
-  const { nombre, apellido, edad, fecha_nacimiento, fecha_contratacion, telefono, correo, cargo } = req.body;
+app.post("/empleados", async (req, res) => {
+  const { nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo } =
+    req.body;
+
+  if (
+    !nombre ||
+    !apellido ||
+    !edad ||
+    !fecha_nacimiento ||
+    !telefono ||
+    !correo ||
+    !cargo
+  ) {
+    return res.status(400).json({ error: "Todos los campos son obligatorios" });
+  }
+
   try {
     const result = await pool.query(
-      'INSERT INTO empleado (nombre, apellido, edad, fecha_nacimiento, fecha_contratacion, telefono, correo, cargo) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-      [nombre, apellido, edad, fecha_nacimiento, fecha_contratacion, telefono, correo, cargo]
+      `INSERT INTO empleado (nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo, fecha_contratacion) 
+          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING *`,
+      [nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Error al agregar el empleado');
+    console.error("Error en el servidor:", err);
+    res
+      .status(500)
+      .json({ error: "Error interno del servidor al agregar empleado" });
   }
 });
 
