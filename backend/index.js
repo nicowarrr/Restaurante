@@ -196,7 +196,7 @@ app.delete('/comandas/:id', async (req, res) => {
 //Obtener todos los empleados que son "Meseros/as"
 app.get('/meseros', async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM empleados WHERE cargo = 'Mesero'");
+    const result = await pool.query("SELECT * FROM empleado WHERE cargo = 'Mesero'");
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -210,7 +210,7 @@ app.get('/reporte/ventas-meseros', async (req, res) => {
     const result = await pool.query(
       `SELECT e.nombre, COUNT(c.id_numero_orden) AS total_ventas
        FROM comanda c
-       JOIN empleados e ON c.id_empleado = e.id_empleado
+       JOIN empleado e ON c.id_empleado = e.id_empleado
        GROUP BY e.nombre
        ORDER BY total_ventas DESC`
     );
