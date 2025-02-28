@@ -21,7 +21,8 @@ const pool = new Pool({
 });
 
 //verificar conexion con el servidor
-pool.connect()
+pool
+  .connect()
   .then(() => {
     console.log("Conexión a la base de datos establecida con éxito");
   })
@@ -30,36 +31,52 @@ pool.connect()
     process.exit(1); // Salir con error si no se puede conectar
   });
 
-// Rutas API
+/* 🔹 RUTAS DE EMPLEADOS */
 
 // Obtener todos los empleados
-app.get('/empleados', async (req, res) => {
+app.get("/empleados", async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM empleado ORDER BY id_empleado ASC');
     res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).send('Error al obtener empleados');
+    res.status(500).send("Error al obtener empleados");
   }
 });
 
-//Agregar un nuevo empleado
-app.post('/empleados', async (req, res) => {
-  const { nombre, apellido, edad, fecha_nacimiento, fecha_contratacion, telefono, correo, cargo } = req.body;
+app.post("/empleados", async (req, res) => {
+  const { nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo } =
+    req.body;
+
+  if (
+    !nombre ||
+    !apellido ||
+    !edad ||
+    !fecha_nacimiento ||
+    !telefono ||
+    !correo ||
+    !cargo
+  ) {
+    return res.status(400).json({ error: "Todos los campos son obligatorios" });
+  }
+
   try {
     const result = await pool.query(
-      'INSERT INTO empleado (nombre, apellido, edad, fecha_nacimiento, fecha_contratacion, telefono, correo, cargo) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-      [nombre, apellido, edad, fecha_nacimiento, fecha_contratacion, telefono, correo, cargo]
+      `INSERT INTO empleado (nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo, fecha_contratacion) 
+          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING *`,
+      [nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Error al agregar el empleado');
+    console.error("Error en el servidor:", err);
+    res
+      .status(500)
+      .json({ error: "Error interno del servidor al agregar empleado" });
   }
 });
 
 // Actualizar un empleado existente
-app.patch('/empleados/:id_empleado', async (req, res) => {
+app.patch("/empleados/:id_empleado", async (req, res) => {
   const { id_empleado } = req.params;
   const {telefono, correo, cargo } = req.body;
 
@@ -80,24 +97,24 @@ app.patch('/empleados/:id_empleado', async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).send('Error al actualizar el empleado');
+    res.status(500).send("Error al actualizar el empleado");
   }
 });
 
 //Obtener todos los platos del menú
 
-app.get('/menu', async (req, res) => {
+app.get("/menu", async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM menu');
+    const result = await pool.query("SELECT * FROM menu");
     res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).send('Error al obtener el menú');
+    res.status(500).send("Error al obtener el menú");
   }
 });
 
 //obtener todas las comandas
-app.get('/comandas', async (req, res) => {
+app.get("/comandas", async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT 
@@ -122,7 +139,7 @@ app.get('/comandas', async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).send('Error al obtener las comandas');
+    res.status(500).send("Error al obtener las comandas");
   }
 });
 
@@ -144,41 +161,43 @@ app.post('/comandas', async (req, res) => {
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).send('Error al agregar la comanda');
+    res.status(500).send("Error al agregar la comanda");
   }
 });
 
 // Ruta para actualizar el estado de la comanda
-app.put('/comandas/:id', (req, res) => {
+app.put("/comandas/:id", (req, res) => {
   const { id } = req.params;
   const { estado } = req.body;
 
-  if (typeof estado !== 'number' ) {
-    return res.status(400).json({ error: 'Estado inválido' });
+  if (typeof estado !== "number") {
+    return res.status(400).json({ error: "Estado inválido" });
   }
 
-  const query = 'UPDATE comanda SET estado = $1 WHERE id_numero_orden = $2';
+  const query = "UPDATE comanda SET estado = $1 WHERE id_numero_orden = $2";
 
   pool.query(query, [estado, id], (error, results) => {
     if (error) {
-      console.error('Error al actualizar el estado:', error);
-      return res.status(500).json({ error: 'Error al actualizar el estado' });
+      console.error("Error al actualizar el estado:", error);
+      return res.status(500).json({ error: "Error al actualizar el estado" });
     }
 
     if (results.rowCount > 0) {
-      res.status(200).json({ message: `Estado de la comanda actualizado a ${estado}` });
+      res
+        .status(200)
+        .json({ message: `Estado de la comanda actualizado a ${estado}` });
     } else {
-      res.status(404).json({ message: 'Comanda no encontrada' });
+      res.status(404).json({ message: "Comanda no encontrada" });
     }
   });
 });
 
 // Eliminar comanda por id
-app.delete('/comandas/:id', async (req, res) => {
+app.delete("/comandas/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
-      'DELETE FROM comanda WHERE id_numero_orden = $1 RETURNING *',
+      "DELETE FROM comanda WHERE id_numero_orden = $1 RETURNING *",
       [id]
     );
 
@@ -189,23 +208,23 @@ app.delete('/comandas/:id', async (req, res) => {
     }
   } catch (err) {
     console.error(err);
-    res.status(500).send('Error al eliminar la comanda');
+    res.status(500).send("Error al eliminar la comanda");
   }
 });
 
 //Obtener todos los empleados que son "Meseros/as"
-app.get('/meseros', async (req, res) => {
+app.get("/meseros", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM empleado WHERE cargo = 'Mesero'");
     res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).send('Error al obtener empleados');
+    res.status(500).send("Error al obtener empleados");
   }
 });
 
 // Obtener ventas por mesero
-app.get('/reporte/ventas-meseros', async (req, res) => {
+app.get("/reporte/ventas-meseros", async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT e.nombre, COUNT(c.id_numero_orden) AS total_ventas
@@ -222,7 +241,7 @@ app.get('/reporte/ventas-meseros', async (req, res) => {
 });
 
 // Obtener platos más pedidos
-app.get('/reporte/platos-mas-pedidos', async (req, res) => {
+app.get("/reporte/platos-mas-pedidos", async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT m.nombre_plato, COUNT(c.id_plato) AS total_pedidos
@@ -240,7 +259,7 @@ app.get('/reporte/platos-mas-pedidos', async (req, res) => {
 });
 
 // Obtener ventas totales por día
-app.get('/reporte/ventas-totales', async (req, res) => {
+app.get("/reporte/ventas-totales", async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT CAST(c.fecha_pedido AS DATE) AS fecha, 
