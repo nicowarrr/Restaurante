@@ -106,8 +106,10 @@ app.get('/comandas', async (req, res) => {
         mn.nombre_plato,
         ms.numero AS numero_mesa,
         d.cantidad,
+        es.nombre_estado,
         c.fecha_pedido,
-        c.fecha_entrega
+        c.fecha_entrega,
+        c.detalles
       FROM 
         comanda c
       JOIN 
@@ -117,7 +119,9 @@ app.get('/comandas', async (req, res) => {
       JOIN
         menu mn ON d.id_plato = mn.id_plato
       JOIN
-        mesa ms ON c.id_mesa = ms.id_mesa`
+        mesa ms ON c.id_mesa = ms.id_mesa
+      JOIN
+        estado es ON c.id_estado = es.id_estado`
     );
     res.json(result.rows);
   } catch (err) {
@@ -129,18 +133,19 @@ app.get('/comandas', async (req, res) => {
 //Agregar nueva comanda
 
 app.post('/comandas', async (req, res) => {
-  const { id_plato, id_empleado, numero_mesa, cantidad, detalles } = req.body;
+  const { id_empleado, id_mesa, id_estado, detalles } = req.body;
   try {
 
     const query = `
-    INSERT INTO comanda (id_numero_orden, id_empleado, id_mesa, id_estado, fecha_pedido, fecha_entrega) 
-    VALUES ($1, $2, $3, $4,  CURRENT_TIMESTAMP - INTERVAL '3 hours', $6) 
+    INSERT INTO comanda (id_empleado, id_mesa, id_estado, fecha_pedido, fecha_entrega, detalles) 
+    VALUES ($1, $2, $3, CURRENT_TIMESTAMP - INTERVAL '3 hours', CURRENT_TIMESTAMP - INTERVAL '3 hours', $4) 
     RETURNING *;
   `;
     const result = await pool.query(
      query,
-      [id_plato, id_empleado, numero_mesa, cantidad, detalles]
+      [id_empleado, id_mesa, id_estado, detalles]
     );
+    console.log(result.rows);
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error(err);
@@ -157,7 +162,7 @@ app.put('/comandas/:id', (req, res) => {
     return res.status(400).json({ error: 'Estado inválido' });
   }
 
-  const query = 'UPDATE comanda SET estado = $1 WHERE id_numero_orden = $2';
+  const query = 'UPDATE comanda SET id_estado = $1 WHERE id_numero_orden = $2';
 
   pool.query(query, [estado, id], (error, results) => {
     if (error) {
@@ -300,6 +305,20 @@ app.get('/detalle', async (req, res) => {
     res.status(500).send('Error al obtener detalles');
   }
 });
+
+app.post('/detalle', async (req, res) => {
+  const { id_numero_orden, id_plato, cantidad } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO detalle (id_plato, id_numero_orden, cantidad) VALUES ($1, $2, $3) RETURNING *',
+      [id_plato, id_numero_orden, cantidad]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al agregar el detalle');
+  }
+} );
 
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);

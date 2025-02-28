@@ -20,6 +20,8 @@ const RegistroComanda = () => {
   const [selectedMesero, setSelectedMesero] = useState(null);
   const [menuOptions, setMenuOptions] = useState([]);
   const [menuSeleccionado, setMenuSeleccionado] = useState("");
+  const [mesaOptions, setMesaOptions] = useState([]);
+  const [mesaSeleccionada, setMesaSeleccionada] = useState("");
   const [cantidad, setCantidad] = useState(1);
   const [orden, setOrden] = useState([]);
   const [comandas, setComandas] = useState([]);
@@ -104,6 +106,24 @@ const RegistroComanda = () => {
     }
   };
 
+  const cargarMesas = async () => {
+    try {
+      const response = await Axios.get("http://localhost:5001/mesa");
+      if (response.status === 200) {
+        setMesaOptions(response.data.map((item) => ({ value: item.id_mesa, label: item.numero })));
+      } else {
+        throw new Error("Error al cargar las mesas");
+      }
+    } catch (error) {
+      console.error("Error al cargar las mesas:", error);
+      Swal.fire({
+        title: "Error",
+        text: "Ocurrió un problema al cargar las mesas. Intente nuevamente.",
+        icon: "error",
+      });
+    }
+  };
+
   useEffect(() => {
     const obtenerComandas = async () => {
       try {
@@ -111,9 +131,9 @@ const RegistroComanda = () => {
         console.log("Respuesta de la API:", response.data);
         if (response.status === 200) {
           // Filtrar comandas según el estado
-          setComandas(response.data.filter(comanda => comanda.estado === 0)); // Solo comandas no listas
-          setComandasPreparacion(response.data.filter(comanda => comanda.estado === 1)); // Solo comandas listas
-          setComandasEntregadas(response.data.filter(comanda => comanda.estado === 2)); // Solo comandas listas
+          setComandas(response.data.filter(comanda => comanda.id_estado === 1)); // En preparacion
+          setComandasPreparacion(response.data.filter(comanda => comanda.id_estado === 2)); // Lista para servir
+          setComandasEntregadas(response.data.filter(comanda => comanda.id_estado === 3)); // Entregada
         }
       } catch (error) {
         console.error("Error al obtener comandas:", error);
@@ -127,6 +147,7 @@ const RegistroComanda = () => {
       try {
         await cargarEmpleados();
         await cargarMenu();
+        await cargarMesas();
 
       } catch (error) {
         console.error("Error al cargar datos iniciales:", error);
@@ -147,17 +168,23 @@ const RegistroComanda = () => {
     }
 
     try {
-      for (const item of orden) {
-        const comandaData = {
-          id_plato: item.id_plato,
-          id_empleado: selectedMesero?.value,
-          numero_mesa: data.NumeroMesa,
-          cantidad: item.cantidad,
-          detalles: data.Detalles || null,
-      };
-      console.log("Datos enviados al backend:", comandaData);
+      const comandaResponse = await Axios.post("http://localhost:5001/comandas", {
+        id_empleado: selectedMesero?.value,
+        id_mesa: mesaSeleccionada,
+        id_estado: 1,
+        detalles: data.detalles || "//",
+      });
 
-      await Axios.post("http://localhost:5001/comandas", comandaData);
+      const numeroOrden = comandaResponse.data.id_numero_orden;
+
+      for (const item of orden) {
+        const detalleData = {
+          id_plato: item.id_plato,
+          id_numero_orden: numeroOrden,
+          cantidad: item.cantidad,
+      };
+      console.log("Datos enviados al backend:", detalleData);
+      await Axios.post("http://localhost:5001/detalle", detalleData);
   
     }
     Swal.fire({
@@ -208,13 +235,6 @@ const RegistroComanda = () => {
     });
   };
 
-  const [currentPage, setCurrentPage] = useState(1); // Página actual
-  const rowsPerPage = 10; // Número de filas por página
-  
-  // Calcula los índices para la paginación
-  const indexOfLastRow = currentPage * rowsPerPage;
-  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-
   const marcarComandaEntregada = async (id) => {
     try {
       const response = await Axios.put(`http://localhost:5001/comandas/${id}`, { estado: 2 });
@@ -261,22 +281,18 @@ const RegistroComanda = () => {
             <label htmlFor="numero_telefono" className="form-label fw-bold">
               N° de Mesa
             </label>
-            <input
-              type="text"
-              className="form-control"
-              maxLength="2"
-              {...register("NumeroMesa", {
-                required: "El número de mesa es obligatorio",
-                pattern: {
-                  value: /^[0-9]+$/,
-                  message: "Solo se permiten números",
-                },
-              })}
-              onInput={(e) =>
-                (e.target.value = e.target.value.replace(/[^0-9]/g, ""))
-              }
-              placeholder="Ingrese N° de mesa"
-            />
+            <select
+            className="form-select"
+            value={mesaSeleccionada}
+            onChange={(e) => setMesaSeleccionada(e.target.value)}
+            >
+              <option value="">Seleccione una mesa</option>
+              {mesaOptions.map((mesa) => (
+                <option key={mesa.value} value={mesa.label}>
+                  {mesa.label}
+                </option>
+              ))}
+            </select>
             {errors.NumeroMesa && (
               <p className="text-danger">{errors.NumeroMesa.message}</p>
             )}
@@ -339,7 +355,7 @@ const RegistroComanda = () => {
             </label>
             <textarea
               className="form-control"
-              {...register("Detalles", {
+              {...register("detalles", {
                 maxLength: {
                   value: 255,
                   message: "Los detalles no pueden exceder los 255 caracteres",
