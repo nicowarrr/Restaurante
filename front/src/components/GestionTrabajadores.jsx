@@ -11,21 +11,115 @@ Axios.interceptors.response.use(
 );
 
 const GestionTrabajadores = () => {
+  // Declaración de estados
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
   const [edad, setEdad] = useState("");
-  const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [telefono, setTelefono] = useState("");
   const [correo, setCorreo] = useState("");
+  const [pais, setPais] = useState("");
   const [cargo, setCargo] = useState("");
+  const [anios, setAnios] = useState("");
+  const [direccion, setDireccion] = useState("");
   const [id, setId] = useState("");
+  const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [editar, setEditar] = useState(false);
   const [empleadosList, setEmpleados] = useState([]);
+  const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
-  useEffect(() => {
-    getEmpleados();
-  }, []);
+  // Estados para errores
+  const [errorNombre, setErrorNombre] = useState("");
+  const [errorApellido, setErrorApellido] = useState("");
+  const [errorTelefono, setErrorTelefono] = useState("");
+  const [errorCorreo, setErrorCorreo] = useState("");
+  const [errorCargo, setErrorCargo] = useState("");
+  const [errorAnios, setErrorAnios] = useState("");
+  const [errorCampos, setErrorCampos] = useState("");
 
+  // Función para calcular la edad a partir de la fecha de nacimiento
+  const calcularEdad = (fecha) => {
+    const hoy = new Date();
+    const cumpleanos = new Date(fecha);
+    let edadCalculada = hoy.getFullYear() - cumpleanos.getFullYear();
+    const m = hoy.getMonth() - cumpleanos.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < cumpleanos.getDate())) {
+      edadCalculada--;
+    }
+    return edadCalculada;
+  };
+
+  // Validaciones de los campos
+  const validarCamposObligatorios = () => {
+    if (!nombre || !apellido || !telefono || !correo || !cargo) {
+      setErrorCampos("Todos los campos son obligatorios.");
+      return false;
+    } else {
+      setErrorCampos("");
+      return true;
+    }
+  };
+
+  const validarNombre = () => {
+    if (/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/.test(nombre)) {
+      setErrorNombre("El nombre solo puede contener letras.");
+      return false;
+    } else {
+      setErrorNombre("");
+      return true;
+    }
+  };
+
+  const validarApellido = () => {
+    if (/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/.test(apellido)) {
+      setErrorApellido("El apellido solo puede contener letras.");
+      return false;
+    } else {
+      setErrorApellido("");
+      return true;
+    }
+  };
+
+  const validarTelefono = () => {
+    if (telefono.length !== 9) {
+      setErrorTelefono("El número de teléfono debe tener exactamente 9 dígitos.");
+      return false;
+    } else {
+      setErrorTelefono("");
+      return true;
+    }
+  };
+
+  const validarCorreo = () => {
+    if (!correo.includes("@")) {
+      setErrorCorreo("El correo debe contener el símbolo @.");
+      return false;
+    } else {
+      setErrorCorreo("");
+      return true;
+    }
+  };
+
+  const validarCargo = () => {
+    if (!cargo) {
+      setErrorCargo("El cargo es obligatorio.");
+      return false;
+    } else {
+      setErrorCargo("");
+      return true;
+    }
+  };
+
+  const validarAnios = () => {
+    if (anios && isNaN(parseInt(anios, 10))) {
+      setErrorAnios("Los años deben ser un número.");
+      return false;
+    } else {
+      setErrorAnios("");
+      return true;
+    }
+  };
+
+  // Función para obtener los empleados
   const getEmpleados = async () => {
     try {
       const response = await Axios.get("http://localhost:5001/empleados1");
@@ -37,6 +131,11 @@ const GestionTrabajadores = () => {
     }
   };
 
+  useEffect(() => {
+    getEmpleados();
+  }, []);
+
+  // Función para limpiar los datos del formulario
   const limpiarDatos = () => {
     setNombre("");
     setApellido("");
@@ -45,6 +144,7 @@ const GestionTrabajadores = () => {
     setTelefono("");
     setCorreo("");
     setCargo("");
+    setAnios("");
     setEditar(false);
     setId("");
   };
@@ -61,90 +161,67 @@ const GestionTrabajadores = () => {
   };
 
   const addEmpleado = async () => {
-    if (
-      !nombre ||
-      !apellido ||
-      !fechaNacimiento ||
-      !telefono ||
-      !correo ||
-      !cargo
-    ) {
-      Swal.fire("Error", "Todos los campos son obligatorios.", "error");
-      return;
+    if (!nombre || !apellido || !fechaNacimiento || !telefono || !correo || !cargo) {
+        Swal.fire("Error", "Todos los campos son obligatorios.", "error");
+        return;
     }
 
     const nuevoEmpleado = {
-      nombre,
-      apellido,
-      edad: calcularEdad(fechaNacimiento), // Calcula la edad correctamente
-      fecha_nacimiento: fechaNacimiento,
-      telefono,
-      correo,
-      cargo,
+        nombre,
+        apellido,
+        edad: calcularEdad(fechaNacimiento),  // Calcula la edad correctamente
+        fecha_nacimiento: fechaNacimiento,
+        telefono,
+        correo,
+        cargo,
     };
 
     console.log("Datos enviados al servidor:", nuevoEmpleado); // Para depuración
 
     try {
-      const response = await Axios.post(
-        "http://localhost:5001/empleados",
-        nuevoEmpleado
-      );
-      if (response.status === 201) {
-        await getEmpleados();
-        limpiarDatos();
-        Swal.fire(
-          "Empleado registrado",
-          "El empleado fue registrado con éxito",
-          "success"
-        );
-      }
+        const response = await Axios.post("http://localhost:5001/empleados", nuevoEmpleado);
+        if (response.status === 201) {
+            await getEmpleados();
+            limpiarDatos();
+            Swal.fire("Empleado registrado", "El empleado fue registrado con éxito", "success");
+        }
     } catch (error) {
-      console.error("Error al agregar empleado:", error);
-      Swal.fire("Error", "No se logró registrar el empleado.", "error");
+        console.error("Error al agregar empleado:", error);
+        Swal.fire("Error", "No se logró registrar el empleado.", "error");
     }
-  };
+};
+
 
   const updateEmpleado = async () => {
-    if (
-      !nombre ||
-      !apellido ||
-      !fechaNacimiento ||
-      !telefono ||
-      !correo ||
-      !cargo
-    ) {
+    if (!nombre || !apellido || !fechaNacimiento || !telefono || !correo || !cargo) {
       Swal.fire("Error", "Todos los campos son obligatorios.", "error");
       return;
     }
-
     try {
       const datosParaActualizar = {
+        id,
         nombre,
         apellido,
-        edad: calcularEdad(fechaNacimiento),
-        fecha_nacimiento: fechaNacimiento,
+        edad: parseInt(edad, 10),
         telefono,
         correo,
         cargo,
+        anios: parseInt(anios, 10),
       };
 
-      const response = await Axios.patch(
-        `http://localhost:5001/empleados/${id}`,
-        datosParaActualizar
-      );
+      const response = await Axios.patch(`http://localhost:5001/empleados/${id}`, datosParaActualizar);
       if (response.status === 200) {
         await getEmpleados();
         limpiarDatos();
-        Swal.fire(
-          "Actualización exitosa",
-          `El empleado ${nombre} fue actualizado con éxito`,
-          "success"
-        );
+        Swal.fire("Actualización exitosa", `El empleado ${nombre} fue actualizado con éxito`, "success");
       }
     } catch (error) {
       console.error("Error al actualizar empleado:", error);
-      Swal.fire("Error", "No se logró actualizar el empleado.", "error");
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "No se logró actualizar el empleado!",
+      });
     }
   };
 
@@ -159,66 +236,27 @@ const GestionTrabajadores = () => {
             <div className="row g-3">
               <div className="col-md-6">
                 <label className="form-label fw-bold">Nombre</label>
-                <input
-                  type="text"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  className="form-control"
-                  placeholder="Ingrese un Nombre"
-                />
+                <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} className="form-control" placeholder="Ingrese un Nombre" />
               </div>
               <div className="col-md-6">
                 <label className="form-label fw-bold">Apellido</label>
-                <input
-                  type="text"
-                  value={apellido}
-                  onChange={(e) => setApellido(e.target.value)}
-                  className="form-control"
-                  placeholder="Ingrese un Apellido"
-                />
+                <input type="text" value={apellido} onChange={(e) => setApellido(e.target.value)} className="form-control" placeholder="Ingrese un Apellido" />
               </div>
               <div className="col-md-6">
-                <label className="form-label fw-bold">
-                  Fecha de Nacimiento
-                </label>
-                <input
-                  type="date"
-                  value={fechaNacimiento}
-                  onChange={(e) => {
-                    setFechaNacimiento(e.target.value);
-                    setEdad(calcularEdad(e.target.value));
-                  }}
-                  className="form-control"
-                />
+                <label className="form-label fw-bold">Fecha de Nacimiento</label>
+                <input type="date" value={fechaNacimiento} onChange={(e) => { setFechaNacimiento(e.target.value); setEdad(calcularEdad(e.target.value)); }} className="form-control" />
               </div>
               <div className="col-md-6">
                 <label className="form-label fw-bold">Edad</label>
-                <input
-                  type="number"
-                  value={edad}
-                  readOnly
-                  className="form-control"
-                />
+                <input type="number" value={edad} readOnly className="form-control" />
               </div>
               <div className="col-md-6">
                 <label className="form-label fw-bold">Teléfono</label>
-                <input
-                  type="text"
-                  value={telefono}
-                  onChange={(e) => setTelefono(e.target.value)}
-                  className="form-control"
-                  placeholder="Ingrese un Teléfono"
-                />
+                <input type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)} className="form-control" placeholder="Ingrese un Teléfono" />
               </div>
               <div className="col-md-6">
                 <label className="form-label fw-bold">Correo</label>
-                <input
-                  type="email"
-                  value={correo}
-                  onChange={(e) => setCorreo(e.target.value)}
-                  className="form-control"
-                  placeholder="Ingrese un Correo"
-                />
+                <input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} className="form-control" placeholder="Ingrese un Correo" />
               </div>
               <div className="col-md-6">
                 <label className="form-label fw-bold">Cargo</label>
@@ -232,6 +270,7 @@ const GestionTrabajadores = () => {
                   <option value="Chef">Chef</option>
                   <option value="Asistente Cocina">Asistente Cocina</option>
                 </select>
+                {errorCargo && <div className="text-danger mt-1">{errorCargo}</div>}
               </div>
             </div>
           </form>
@@ -242,9 +281,7 @@ const GestionTrabajadores = () => {
               Actualizar
             </button>
           ) : (
-            <button onClick={addEmpleado} className="btn btn-success">
-              Registrar
-            </button>
+            <button onClick={addEmpleado} className="btn btn-success">Registrar</button>
           )}
         </div>
         <div className="card-body">
@@ -259,13 +296,12 @@ const GestionTrabajadores = () => {
                   <th>Teléfono</th>
                   <th>Correo</th>
                   <th>Cargo</th>
-                  <th>Fecha Contratación</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {empleadosList.map((empleado) => (
-                  <tr key={empleado.id_empleado}>
+                {empleadosList.map((empleado, index) => (
+                  <tr key={empleado.id_empleado || index}>
                     <td>{empleado.id_empleado}</td>
                     <td>{empleado.nombre}</td>
                     <td>{empleado.apellido}</td>
@@ -273,33 +309,9 @@ const GestionTrabajadores = () => {
                     <td>{empleado.telefono}</td>
                     <td>{empleado.correo}</td>
                     <td>{empleado.cargo}</td>
+                    <td>{empleado.fecha_contratacion}</td>
                     <td>
-                      {empleado.fecha_contratacion
-                        ? new Date(
-                            empleado.fecha_contratacion
-                          ).toLocaleDateString("es-ES")
-                        : "No disponible"}
-                    </td>
-
-                    <td>
-                      <button
-                        className="btn btn-outline-info btn-sm"
-                        onClick={() => {
-                          setEditar(true);
-                          setId(empleado.id_empleado);
-                          setNombre(empleado.nombre);
-                          setApellido(empleado.apellido);
-                          setEdad(empleado.edad);
-                          setTelefono(empleado.telefono);
-                          setCorreo(empleado.correo);
-                          setCargo(empleado.cargo);
-                          setFechaNacimiento(
-                            empleado.fecha_nacimiento
-                              ? empleado.fecha_nacimiento.split("T")[0]
-                              : ""
-                          ); // Corregido
-                        }}
-                      >
+                      <button className="btn btn-outline-info btn-sm" onClick={() => { setEditar(true); setId(empleado.id_empleado); setNombre(empleado.nombre); setApellido(empleado.apellido); setEdad(empleado.edad); setTelefono(empleado.telefono); setCorreo(empleado.correo); setCargo(empleado.cargo); }}>
                         Editar
                       </button>
                     </td>

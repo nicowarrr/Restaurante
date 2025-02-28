@@ -21,8 +21,7 @@ const pool = new Pool({
 });
 
 //verificar conexion con el servidor
-pool
-  .connect()
+pool.connect()
   .then(() => {
     console.log("Conexión a la base de datos establecida con éxito");
   })
@@ -31,21 +30,20 @@ pool
     process.exit(1); // Salir con error si no se puede conectar
   });
 
-/* 🔹 RUTAS DE EMPLEADOS */
+// Rutas API
 
 // Obtener todos los empleados
-app.get("/empleados", async (req, res) => {
+app.get('/empleados', async (req, res) => {
   try {
-    const result = await pool.query(
-      "SELECT * FROM empleado ORDER BY id_empleado ASC"
-    );
+    const result = await pool.query('SELECT * FROM empleado ORDER BY id_empleado ASC');
     res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error al obtener empleados");
+    res.status(500).send('Error al obtener empleados');
   }
 });
 
+//Agregar un nuevo empleado
 app.post("/empleados", async (req, res) => {
   const { nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo } =
     req.body;
@@ -78,33 +76,19 @@ app.post("/empleados", async (req, res) => {
 });
 
 // Actualizar un empleado existente
-app.patch("/empleados/:id_empleado", async (req, res) => {
+app.patch('/empleados/:id_empleado', async (req, res) => {
   const { id_empleado } = req.params;
-  const { nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo } =
-    req.body;
+  const {telefono, correo, cargo } = req.body;
 
   try {
     const result = await pool.query(
       `UPDATE empleado
-       SET nombre = $1,
-           apellido = $2,
-           edad = $3,
-           fecha_nacimiento = $4,
-           telefono = $5,
-           correo = $6,
-           cargo = $7
-       WHERE id_empleado = $8
+       SET telefono = $1,
+           correo = $2,
+           cargo = $3,
+       WHERE id_empleado = $4
        RETURNING *`,
-      [
-        nombre,
-        apellido,
-        edad,
-        fecha_nacimiento,
-        telefono,
-        correo,
-        cargo,
-        id_empleado,
-      ]
+      [telefono, correo, cargo, id_empleado]
     );
 
     if (result.rowCount === 0) {
@@ -113,115 +97,105 @@ app.patch("/empleados/:id_empleado", async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error al actualizar el empleado");
+    res.status(500).send('Error al actualizar el empleado');
   }
 });
 
 //Obtener todos los platos del menú
 
-app.get("/menu", async (req, res) => {
+app.get('/menu', async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM menu");
+    const result = await pool.query('SELECT * FROM menu');
     res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error al obtener el menú");
+    res.status(500).send('Error al obtener el menú');
   }
 });
 
 //obtener todas las comandas
-app.get("/comandas", async (req, res) => {
+app.get('/comandas', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT 
-        c.id_numero_orden, 
-        m.nombre_plato, 
-        e.nombre AS nombre_empleado, 
-        c.fecha_pedido, 
-        c.numero_mesa, 
-        c.cantidad, 
-        c.detalles,
-        c.estado
+        c.id_numero_orden,
+        e.nombre AS nombre_empleado,
+        mn.nombre_plato,
+        ms.numero AS numero_mesa,
+        d.cantidad,
+        c.fecha_pedido,
+        c.fecha_entrega
       FROM 
         comanda c
       JOIN 
-        menu m ON c.id_plato = m.id_plato
-      JOIN 
-        empleados e ON c.id_empleado = e.id_empleado`
+        empleado e ON c.id_empleado = e.id_empleado
+      JOIN
+        detalle d ON c.id_numero_orden = d.id_numero_orden
+      JOIN
+        menu mn ON d.id_plato = mn.id_plato
+      JOIN
+        mesa ms ON c.id_mesa = ms.id_mesa`
     );
     res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error al obtener las comandas");
+    res.status(500).send('Error al obtener las comandas');
   }
 });
 
 //Agregar nueva comanda
 
-app.post("/comandas", async (req, res) => {
-  const {
-    id_numero_comanda,
-    id_plato,
-    id_empleado,
-    numero_mesa,
-    cantidad,
-    detalles,
-  } = req.body;
+app.post('/comandas', async (req, res) => {
+  const { id_plato, id_empleado, numero_mesa, cantidad, detalles } = req.body;
   try {
-    const query = `INSERT INTO comanda (id_numero_comanda ,id_plato, id_empleado, fecha_pedido, numero_mesa, cantidad, detalles, id_numero_orden) 
-    VALUES ($1, $2, CURRENT_TIMESTAMP - INTERVAL '3 hours', $3, $4, $5, $6) 
-    RETURNING *;`;
 
-    const result = await pool.query(query, [
-      id_numero_comanda,
-      id_plato,
-      id_empleado,
-      numero_mesa,
-      cantidad,
-      detalles,
-      id_numero_orden,
-    ]);
-
+    const query = `
+    INSERT INTO comanda (id_numero_orden, id_empleado, id_mesa, id_estado, fecha_pedido, fecha_entrega) 
+    VALUES ($1, $2, $3, $4,  CURRENT_TIMESTAMP - INTERVAL '3 hours', $6) 
+    RETURNING *;
+  `;
+    const result = await pool.query(
+     query,
+      [id_plato, id_empleado, numero_mesa, cantidad, detalles]
+    );
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error al agregar la comanda");
+    res.status(500).send('Error al agregar la comanda');
   }
 });
 
 // Ruta para actualizar el estado de la comanda
-app.put("/comandas/:id", (req, res) => {
+app.put('/comandas/:id', (req, res) => {
   const { id } = req.params;
   const { estado } = req.body;
 
-  if (typeof estado !== "number") {
-    return res.status(400).json({ error: "Estado inválido" });
+  if (typeof estado !== 'number' ) {
+    return res.status(400).json({ error: 'Estado inválido' });
   }
 
-  const query = "UPDATE comanda SET estado = $1 WHERE id_numero_orden = $2";
+  const query = 'UPDATE comanda SET estado = $1 WHERE id_numero_orden = $2';
 
   pool.query(query, [estado, id], (error, results) => {
     if (error) {
-      console.error("Error al actualizar el estado:", error);
-      return res.status(500).json({ error: "Error al actualizar el estado" });
+      console.error('Error al actualizar el estado:', error);
+      return res.status(500).json({ error: 'Error al actualizar el estado' });
     }
 
     if (results.rowCount > 0) {
-      res
-        .status(200)
-        .json({ message: `Estado de la comanda actualizado a ${estado}` });
+      res.status(200).json({ message: `Estado de la comanda actualizado a ${estado}` });
     } else {
-      res.status(404).json({ message: "Comanda no encontrada" });
+      res.status(404).json({ message: 'Comanda no encontrada' });
     }
   });
 });
 
 // Eliminar comanda por id
-app.delete("/comandas/:id", async (req, res) => {
+app.delete('/comandas/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
-      "DELETE FROM comanda WHERE id_numero_orden = $1 RETURNING *",
+      'DELETE FROM comanda WHERE id_numero_orden = $1 RETURNING *',
       [id]
     );
 
@@ -232,30 +206,28 @@ app.delete("/comandas/:id", async (req, res) => {
     }
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error al eliminar la comanda");
+    res.status(500).send('Error al eliminar la comanda');
   }
 });
 
 //Obtener todos los empleados que son "Meseros/as"
-app.get("/meseros", async (req, res) => {
+app.get('/meseros', async (req, res) => {
   try {
-    const result = await pool.query(
-      "SELECT * FROM empleados WHERE cargo = 'Mesero'"
-    );
+    const result = await pool.query("SELECT * FROM empleado WHERE cargo = 'Mesero'");
     res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error al obtener empleados");
+    res.status(500).send('Error al obtener empleados');
   }
 });
 
 // Obtener ventas por mesero
-app.get("/reporte/ventas-meseros", async (req, res) => {
+app.get('/reporte/ventas-meseros', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT e.nombre, COUNT(c.id_numero_orden) AS total_ventas
        FROM comanda c
-       JOIN empleados e ON c.id_empleado = e.id_empleado
+       JOIN empleado e ON c.id_empleado = e.id_empleado
        GROUP BY e.nombre
        ORDER BY total_ventas DESC`
     );
@@ -267,7 +239,7 @@ app.get("/reporte/ventas-meseros", async (req, res) => {
 });
 
 // Obtener platos más pedidos
-app.get("/reporte/platos-mas-pedidos", async (req, res) => {
+app.get('/reporte/platos-mas-pedidos', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT m.nombre_plato, COUNT(c.id_plato) AS total_pedidos
@@ -285,7 +257,7 @@ app.get("/reporte/platos-mas-pedidos", async (req, res) => {
 });
 
 // Obtener ventas totales por día
-app.get("/reporte/ventas-totales", async (req, res) => {
+app.get('/reporte/ventas-totales', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT CAST(c.fecha_pedido AS DATE) AS fecha, 
@@ -299,19 +271,6 @@ app.get("/reporte/ventas-totales", async (req, res) => {
   } catch (err) {
     console.error("Error obteniendo ventas totales:", err);
     res.status(500).send("Error al obtener las ventas totales");
-  }
-});
-
-app.get("/empleados1", async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT id_empleado, nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo, 
-      TO_CHAR(fecha_contratacion, 'YYYY-MM-DD') AS fecha_contratacion FROM empleado ORDER BY id_empleado ASC`
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Error al obtener empleados");
   }
 });
 
