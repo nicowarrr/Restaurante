@@ -1,9 +1,11 @@
 import React, { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { set, useForm } from "react-hook-form";
 import { useState } from "react";
+import FacturaPopUp from "./factura";
 import Select from "react-select";
 import Axios from "axios";
 import Swal from "sweetalert2";
+import '../styles/RegistroComanda.css';
 
 const RegistroComanda = () => {
   const {
@@ -26,8 +28,11 @@ const RegistroComanda = () => {
   const [orden, setOrden] = useState([]);
   const [comandas, setComandas] = useState([]);
   const [filteredComandas, setFilteredComanda] = useState([]);
-  const [comandasPreparacion, setComandasPreparacion] = useState([]);
-  const [comandasEntregadas, setComandasEntregadas] = useState([]);
+  const [detallesPreparacion, setDetallesPreparacion] = useState([]);
+  const [detallesEntregadas, setDetallesEntregadas] = useState([]);
+  const [pagarComanda, setPagarComanda] = useState([]);
+  const [popUp, setPopUp] = useState(false);
+  const [idNumeroOrden, setIdNumeroOrden] = useState(null);
   
 
   const cargarEmpleados = async () => {
@@ -124,23 +129,31 @@ const RegistroComanda = () => {
     }
   };
 
-  useEffect(() => {
-    const obtenerComandas = async () => {
-      try {
-        const response = await Axios.get('http://localhost:5001/comandas');
-        console.log("Respuesta de la API:", response.data);
-        if (response.status === 200) {
-          // Filtrar comandas según el estado
-          setComandas(response.data.filter(comanda => comanda.id_estado === 1)); // En preparacion
-          setComandasPreparacion(response.data.filter(comanda => comanda.id_estado === 2)); // Lista para servir
-          setComandasEntregadas(response.data.filter(comanda => comanda.id_estado === 3)); // Entregada
-        }
-      } catch (error) {
-        console.error("Error al obtener comandas:", error);
+  const obtenerDetalles = async () => {
+    try {
+      const response = await Axios.get('http://localhost:5001/detalle');
+      console.log("Respuesta de la API:", response.data);
+      if (response.status === 200) {
+        // Filtrar comandas según el estado
+        setDetallesPreparacion(response.data.filter(detalle => detalle.estado_detalle === 2 || detalle.estado_detalle === 3)); // Lista para servir
+        // Entregada
       }
-    };
-    obtenerComandas();
-  }, []);
+    } catch (error) {
+      console.error("Error al obtener comandas:", error);
+    }
+  };
+
+  const obtenerComandasListas = async () => {
+    try {
+      const response = await Axios.get('http://localhost:5001/comandas/pagar');
+      console.log("Respuesta de la API:", response.data);
+      if (response.status === 200) {
+        setPagarComanda(response.data);
+      }
+    } catch (error) {
+      console.error("Error al obtener comandas:", error);
+    }
+  }; 
 
   useEffect(() => {
     const cargarDatosIniciales = async () => {
@@ -148,6 +161,8 @@ const RegistroComanda = () => {
         await cargarEmpleados();
         await cargarMenu();
         await cargarMesas();
+        await obtenerDetalles();
+        await obtenerComandasListas();
 
       } catch (error) {
         console.error("Error al cargar datos iniciales:", error);
@@ -171,7 +186,7 @@ const RegistroComanda = () => {
       const comandaResponse = await Axios.post("http://localhost:5001/comandas", {
         id_empleado: selectedMesero?.value,
         id_mesa: mesaSeleccionada,
-        id_estado: 1,
+        id_estado: 4,
         detalles: data.detalles || "//",
       });
 
@@ -182,8 +197,8 @@ const RegistroComanda = () => {
           id_plato: item.id_plato,
           id_numero_orden: numeroOrden,
           cantidad: item.cantidad,
+          id_estado: 1,
       };
-      console.log("Datos enviados al backend:", detalleData);
       await Axios.post("http://localhost:5001/detalle", detalleData);
   
     }
@@ -192,7 +207,9 @@ const RegistroComanda = () => {
       text: "Comanda(s) enviada(s) correctamente.",
       icon: "success",
     });
+    obtenerDetalles();
     handleReset();
+
   } catch (error) {
     console.error("Error al enviar la comanda:", error);
     console.log("fallo", data);
@@ -235,28 +252,76 @@ const RegistroComanda = () => {
     });
   };
 
-  const marcarComandaEntregada = async (id) => {
+  const marcarDetalleEntregado = async (id_detalle) => {
     try {
-      const response = await Axios.put(`http://localhost:5001/comandas/${id}`, { estado: 2 });
+      const response = await Axios.put(`http://localhost:5001/detalle/${id_detalle}`, { id_estado: 3 });
       if (response.status === 200) {
-        // Buscar la comanda en la lista de comandasPreparacion
-        const comandaMovida = comandasPreparacion.find(comanda => comanda.id_numero_orden === id);
-        
-        if (comandaMovida) {
-          // Actualizar el estado de la comanda y moverla a comandasEntregadas
-          setComandasPreparacion(comandasPreparacion.filter(comanda => comanda.id_numero_orden !== id));
-          setComandasEntregadas(prev => [...prev, { ...comandaMovida, estado: 2 }]);
-        } else {
-          console.error("Comanda no encontrada en comandasPreparacion");
-        }
+        obtenerDetalles();
+        obtenerComandasListas();
+        Swal.fire({
+          title: "Éxito",
+          text: "Comanda entregada correctamente.",
+          icon: "success",
+        });
       }
+      
     } catch (error) {
       console.error("Error al marcar la comanda como entregada:", error);
+      Swal.fire({
+        title: "Error",
+        text: "Error al entregar la comanda.",
+        icon: "error",
+      });
     }
   };
 
-  // Función para cambiar el estado de la comanda 
+  const marcarDetalleCancelado = async (id) => {
+    try {
+      obtenerDetalles();
+      Swal.fire({
+        title: "Quieres cancelar el pedido?",
+        showDenyButton: true,
+        showCancelButton: false,
+        confirmButtonText: "Si",
+        denyButtonText: `No`,
+      }).then((result) => {
+        if (result.isConfirmed) {
+          Axios.put(`http://localhost:5001/detalle/${id}`, { id_estado: 6 })
+          Swal.fire("Pedido cancelado!", "", "success");
+          obtenerDetalles();
+          obtenerComandasListas();
+        } else if (result.isDenied) {
+          
+        }
+      });
+      
+    } catch (error) {
+      console.error("Error al marcar la comanda como cancelada:", error);
+    }
+  }
   
+  const openPopUp = () => {
+      setPopUp(true);
+  };
+
+  const closePopUp = () => {
+      setPopUp(false);
+  };
+
+  // const pagarUnaComanda = async (id_numero_orden) => { 
+  //   try {
+  //     const response = await Axios.post('http://localhost:5001/ventas')
+  //     if response.status === 200 {
+
+  //     }
+
+
+  //     openPopUp();
+  //   } catch (error) {
+  //     console.error("Error al pagar la comanda:", error);
+  //   }
+  // };
+
   return (
     <div className="container mt-4 p-4 rounded shadow bg-light">
       <h2 className="text-center mb-4 text-primary">Registrar comanda</h2>
@@ -389,44 +454,76 @@ const RegistroComanda = () => {
             </button>
           </div>
         </div>
-        <div>
-          <h2>Comandas Listas</h2>
+        <div className="table-responsive mt-4">
+          <h2>Pedidos Listos</h2>
           <table className="table table-bordered mt-3">
             <thead className="table-dark">
               <tr>
-                <th>Mesero</th>
                 <th>Mesa</th>
                 <th>Pedido</th>
-                <th>Cantidad</th>
-                <th>Detalles</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {comandasPreparacion.map((comanda, index) => (
+              {detallesPreparacion.map((detalle, index) => (
                 <tr key={index} style={{ backgroundColor: "yellow" }}>
-                  <td>{comanda.nombre_empleado}</td>
-                  <td>{comanda.numero_mesa}</td>
-                  <td>{comanda.nombre_plato}</td>
-                  <td>{comanda.cantidad}</td>
-                  <td>{comanda.detalles}</td>
+                  <td>{detalle.numero_mesa}</td>
+                  <td>{detalle.cantidad} x {detalle.nombre_plato}</td>
                   <td>
                   <button
                     type="button"
-                      className="btn btn-primary mx-2"
-                      onClick={() => marcarComandaEntregada(comanda.id_numero_orden,2)}>
-                      Entregada
-                    </button>
+                    className="btn btn-primary mx-2"
+                    onClick={() => marcarDetalleEntregado(detalle.id_detalle, 3)}
+                    disabled={detalle.estado_detalle === 3}>
+                    {detalle.estado_detalle === 2 ? "Entregar" : "Entregada"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary mx-2"
+                    onClick={() => marcarDetalleCancelado(detalle.id_detalle, 6)}>
+                    Anular
+                  </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-
-
+        <div className="table-responsive mt-4 ml-4">
+            <h2>Pagar</h2>
+            <table className="table table-bordered mt-3">
+              <thead className="table-dark">
+                <tr>
+                  <th>Mesa</th>
+                  <th>Mesero</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagarComanda.map((comanda, index) => (
+                  <tr key={index} style={{ backgroundColor: "yellow" }}>
+                    <td>{comanda.id_mesa}</td>
+                    <td>{comanda.nombre_empleado}</td>
+                    <td>
+                    <button
+                      type="button"
+                      className="btn btn-success mx-2"
+                      onClick={() => { setIdNumeroOrden(comanda.id_numero_orden); setPopUp(true); }}>
+                      Pagar
+                    </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
       </form>
-        </div>
+      <FacturaPopUp 
+        popUp={popUp} 
+        closePopUp={() => setPopUp(false)} 
+        idNumeroOrden={idNumeroOrden} 
+      />
+    </div>
   );
 };
 
