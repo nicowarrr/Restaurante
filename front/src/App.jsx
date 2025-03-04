@@ -8,7 +8,6 @@ import Ventas from "./pages/Ventas";
 import Footer from "./components/Footer";
 import Formulario from "./pages/FormularioLive";
 import Stats from "./pages/Stats";
-import Reporte from "./pages/Reportesexcel";
 import ProtectedRoute from "./ProtectedRoute";
 import { UserProvider } from "./context/UserContext";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -18,7 +17,7 @@ import Suscripcion from "./pages/Suscripcion";
 import Comanda from "./pages/Comanda";
 import Comanda2 from "./pages/Comanda2";
 import ListaComanda from "./pages/ListaComanda";
-import Reportes from "./pages/Reportesexcel";
+import Reportes1 from "./pages/ReporteBI";
 
 
 
@@ -36,7 +35,7 @@ function App() {
             <Route path="/" element={<Ventas />} />
             <Route path="/RegistroPersonas" element={<Formulario />} />
             <Route path="/Estado" element={<Stats />} />
-            <Route path="/reportes" element={<Reportes />} />
+            <Route path="/reportes" element={<Reportes1 />} />
             <Route path="/suscripcion" element={<Suscripcion />} />
             <Route path="/confirmacion" element={<Confirmacion />} />
           </Routes>
