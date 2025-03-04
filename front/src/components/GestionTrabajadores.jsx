@@ -17,15 +17,12 @@ const GestionTrabajadores = () => {
   const [edad, setEdad] = useState("");
   const [telefono, setTelefono] = useState("");
   const [correo, setCorreo] = useState("");
-  const [pais, setPais] = useState("");
   const [cargo, setCargo] = useState("");
   const [anios, setAnios] = useState("");
-  const [direccion, setDireccion] = useState("");
   const [id, setId] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [editar, setEditar] = useState(false);
   const [empleadosList, setEmpleados] = useState([]);
-  const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
   // Estados para errores
   const [errorNombre, setErrorNombre] = useState("");
@@ -63,10 +60,9 @@ const GestionTrabajadores = () => {
     if (/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/.test(nombre)) {
       setErrorNombre("El nombre solo puede contener letras.");
       return false;
-    } else {
-      setErrorNombre("");
-      return true;
     }
+    setErrorNombre("");
+    return true;
   };
 
   const validarApellido = () => {
@@ -149,16 +145,6 @@ const GestionTrabajadores = () => {
     setId("");
   };
 
-  const calcularEdad = (fecha) => {
-    const hoy = new Date();
-    const cumpleanos = new Date(fecha);
-    let edadCalculada = hoy.getFullYear() - cumpleanos.getFullYear();
-    const m = hoy.getMonth() - cumpleanos.getMonth();
-    if (m < 0 || (m === 0 && hoy.getDate() < cumpleanos.getDate())) {
-      edadCalculada--;
-    }
-    return edadCalculada;
-  };
 
   const addEmpleado = async () => {
     if (!nombre || !apellido || !fechaNacimiento || !telefono || !correo || !cargo) {
@@ -202,6 +188,7 @@ const GestionTrabajadores = () => {
         id,
         nombre,
         apellido,
+        fecha_nacimiento: fechaNacimiento,
         edad: parseInt(edad, 10),
         telefono,
         correo,
@@ -209,7 +196,7 @@ const GestionTrabajadores = () => {
         anios: parseInt(anios, 10),
       };
 
-      const response = await Axios.patch(`http://localhost:5001/empleados/${id}`, datosParaActualizar);
+      const response = await Axios.patch(`http://localhost:5001/empleados1/${id}`, datosParaActualizar);
       if (response.status === 200) {
         await getEmpleados();
         limpiarDatos();
@@ -225,6 +212,13 @@ const GestionTrabajadores = () => {
     }
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (validarCamposObligatorios() && validarNombre() && validarApellido() && validarTelefono() && validarCorreo() && validarCargo()) {
+      alert("Formulario enviado correctamente");
+    }
+  };
+
   return (
     <div className="container mt-5">
       <div className="card shadow">
@@ -232,48 +226,135 @@ const GestionTrabajadores = () => {
           <h4>Gestión de Empleados</h4>
         </div>
         <div className="card-body">
-          <form>
-            <div className="row g-3">
-              <div className="col-md-6">
-                <label className="form-label fw-bold">Nombre</label>
-                <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} className="form-control" placeholder="Ingrese un Nombre" />
-              </div>
-              <div className="col-md-6">
-                <label className="form-label fw-bold">Apellido</label>
-                <input type="text" value={apellido} onChange={(e) => setApellido(e.target.value)} className="form-control" placeholder="Ingrese un Apellido" />
-              </div>
-              <div className="col-md-6">
-                <label className="form-label fw-bold">Fecha de Nacimiento</label>
-                <input type="date" value={fechaNacimiento} onChange={(e) => { setFechaNacimiento(e.target.value); setEdad(calcularEdad(e.target.value)); }} className="form-control" />
-              </div>
-              <div className="col-md-6">
-                <label className="form-label fw-bold">Edad</label>
-                <input type="number" value={edad} readOnly className="form-control" />
-              </div>
-              <div className="col-md-6">
-                <label className="form-label fw-bold">Teléfono</label>
-                <input type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)} className="form-control" placeholder="Ingrese un Teléfono" />
-              </div>
-              <div className="col-md-6">
-                <label className="form-label fw-bold">Correo</label>
-                <input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} className="form-control" placeholder="Ingrese un Correo" />
-              </div>
-              <div className="col-md-6">
-                <label className="form-label fw-bold">Cargo</label>
-                <select
-                  value={cargo}
-                  onChange={(e) => setCargo(e.target.value)}
-                  className="form-select"
-                >
-                  <option value="">Seleccione un Cargo</option>
-                  <option value="Mesero">Mesero</option>
-                  <option value="Chef">Chef</option>
-                  <option value="Asistente Cocina">Asistente Cocina</option>
-                </select>
-                {errorCargo && <div className="text-danger mt-1">{errorCargo}</div>}
-              </div>
-            </div>
-          </form>
+        <form onSubmit={handleSubmit}>
+  <div className="row g-3">
+    <div className="col-md-6">
+      <label className="form-label fw-bold">Nombre</label>
+      <input
+        type="text"
+        value={nombre}
+        onChange={(e) => {
+          const value = e.target.value;
+          if (/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/.test(value)) {
+            setNombre(value);
+          }
+        }}
+        className="form-control"
+        placeholder="Ingrese un Nombre"
+      />
+      {errorNombre && <div className="text-danger mt-1">{errorNombre}</div>}
+    </div>
+
+    <div className="col-md-6">
+      <label className="form-label fw-bold">Apellido</label>
+      <input
+        type="text"
+        value={apellido}
+        onChange={(e) => {
+          const value = e.target.value;
+          if (/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/.test(value)) {
+            setApellido(value);
+          }
+        }}
+        className="form-control"
+        placeholder="Ingrese un Apellido"
+      />
+      {errorApellido && <div className="text-danger mt-1">{errorApellido}</div>}
+    </div>
+
+    <div className="col-md-6">
+      <label className="form-label fw-bold">Fecha de Nacimiento</label>
+      <input
+        type="date"
+        value={fechaNacimiento}
+        onChange={(e) => {
+          const fechaSeleccionada = e.target.value;
+          const fechaMin = "1900-01-01";
+          const fechaMax = new Date().toISOString().split("T")[0];
+
+          if (fechaSeleccionada >= fechaMin && fechaSeleccionada <= fechaMax) {
+            setFechaNacimiento(fechaSeleccionada);
+            setEdad(calcularEdad(fechaSeleccionada));
+          }
+        }}
+        min="1900-01-01"
+        max={new Date().toISOString().split("T")[0]}
+        className="form-control"
+      />
+    </div>
+
+    <div className="col-md-6">
+      <label className="form-label fw-bold">Edad</label>
+      <input
+        type="number"
+        value={edad}
+        onChange={(e) => {
+          const value = e.target.value;
+          if (value >= 0) {
+            setEdad(value);
+          }
+        }}
+        className="form-control"
+      />
+      {edad < 0 && <div className="text-danger mt-1">La edad no puede ser negativa</div>}
+    </div>
+
+    <div className="col-md-6">
+      <label className="form-label fw-bold">Teléfono</label>
+      <input
+        type="text"
+        value={telefono}
+        onChange={(e) => {
+          const value = e.target.value;
+          if (/^\d{0,9}$/.test(value)) {
+            setTelefono(value);
+          }
+        }}
+        onBlur={() => {
+          if (telefono.length !== 9) {
+            setErrorTelefono("El número de teléfono debe tener exactamente 9 dígitos.");
+          } else {
+            setErrorTelefono("");
+          }
+        }}
+        className="form-control"
+        placeholder="Ingrese un Teléfono"
+      />
+      {errorTelefono && <div className="text-danger mt-1">{errorTelefono}</div>}
+    </div>
+
+    <div className="col-md-6">
+      <label className="form-label fw-bold">Correo</label>
+      <input
+        type="email"
+        value={correo}
+        onChange={(e) => setCorreo(e.target.value)}
+        onBlur={() => {
+          if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(correo)) {
+            setErrorCorreo("Ingrese un correo válido (ejemplo@dominio.com)");
+          } else {
+            setErrorCorreo("");
+          }
+        }}
+        className="form-control"
+        placeholder="Ingrese un Correo"
+      />
+      {errorCorreo && <div className="text-danger mt-1">{errorCorreo}</div>}
+    </div>
+
+    <div className="col-md-6">
+      <label className="form-label fw-bold">Cargo</label>
+      <select value={cargo} onChange={(e) => setCargo(e.target.value)} className="form-select">
+        <option value="">Seleccione un Cargo</option>
+        <option value="Mesero">Mesero</option>
+        <option value="Chef">Chef</option>
+        <option value="Asistente Cocina">Asistente Cocina</option>
+      </select>
+      {errorCargo && <div className="text-danger mt-1">{errorCargo}</div>}
+    </div>
+  </div>
+</form>
+
         </div>
         <div className="card-footer text-center">
           {editar ? (
@@ -296,6 +377,7 @@ const GestionTrabajadores = () => {
                   <th>Teléfono</th>
                   <th>Correo</th>
                   <th>Cargo</th>
+                  <th>Fecha Contratación</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
@@ -309,11 +391,28 @@ const GestionTrabajadores = () => {
                     <td>{empleado.telefono}</td>
                     <td>{empleado.correo}</td>
                     <td>{empleado.cargo}</td>
-                    <td>{empleado.fecha_contratacion}</td>
                     <td>
-                      <button className="btn btn-outline-info btn-sm" onClick={() => { setEditar(true); setId(empleado.id_empleado); setNombre(empleado.nombre); setApellido(empleado.apellido); setEdad(empleado.edad); setTelefono(empleado.telefono); setCorreo(empleado.correo); setCargo(empleado.cargo); }}>
-                        Editar
-                      </button>
+  {empleado.fecha_contratacion 
+    ? new Date(empleado.fecha_contratacion).toLocaleDateString('es-ES') 
+    : "No disponible"}
+</td>
+
+                    <td>
+<button className="btn btn-outline-info btn-sm" 
+  onClick={() => { 
+    setEditar(true);
+    setId(empleado.id_empleado);
+    setNombre(empleado.nombre);
+    setApellido(empleado.apellido);
+    setEdad(empleado.edad);
+    setTelefono(empleado.telefono);
+    setCorreo(empleado.correo);
+    setCargo(empleado.cargo);
+    setFechaNacimiento(empleado.fecha_nacimiento ? empleado.fecha_nacimiento.split("T")[0] : ""); // Corregido
+  }}>
+  Editar
+</button>
+
                     </td>
                   </tr>
                 ))}

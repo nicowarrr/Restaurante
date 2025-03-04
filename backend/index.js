@@ -274,6 +274,177 @@ app.get('/reporte/ventas-totales', async (req, res) => {
   }
 });
 
+app.get("/empleados1", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id_empleado, nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo, 
+      TO_CHAR(fecha_contratacion, 'YYYY-MM-DD') AS fecha_contratacion FROM empleado ORDER BY id_empleado ASC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error al obtener empleados");
+  }
+});
+
+// Actualizar un empleado existente
+app.patch('/empleados1/:id_empleado', async (req, res) => {
+  const { id_empleado } = req.params;
+  const { nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE empleado
+       SET nombre = $1,
+           apellido = $2,
+           edad = $3,
+           fecha_nacimiento = $4,
+           telefono = $5,
+           correo = $6,
+           cargo = $7
+       WHERE id_empleado = $8
+       RETURNING *`,
+      [nombre, apellido, edad, fecha_nacimiento, telefono, correo, cargo, id_empleado]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).send("Empleado no encontrado");
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al actualizar el empleado');
+  }
+});
+
+app.get('/comandas1', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        c.id_numero_orden,
+        c.id_estado,
+        e.nombre AS nombre_empleado,
+        mn.nombre_plato,
+        ms.numero AS numero_mesa,
+        d.cantidad,
+        c.fecha_pedido,
+        c.fecha_entrega,
+        est.nombre_estado AS estado
+      FROM 
+        comanda c
+      JOIN 
+        empleado e ON c.id_empleado = e.id_empleado
+      JOIN
+        detalle d ON c.id_numero_orden = d.id_numero_orden
+      JOIN
+        menu mn ON d.id_plato = mn.id_plato
+      JOIN
+        mesa ms ON c.id_mesa = ms.id_mesa
+      JOIN
+        estado est ON c.id_estado = est.id_estado
+      ORDER BY c.fecha_pedido DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al obtener las comandas');
+  }
+});
+
+app.get('/comandas2', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        d.id_detalle,
+        d.id_numero_orden,
+        c.id_estado,
+        est.nombre_estado AS estado,
+        e.nombre AS nombre_empleado,
+        mn.nombre_plato,
+        ms.numero AS numero_mesa,
+        d.cantidad,
+        c.fecha_pedido,
+        c.fecha_entrega,
+        COALESCE(c.detalles, 'Sin detalles') AS detalles
+      FROM 
+        detalle d
+      JOIN 
+        comanda c ON d.id_numero_orden = c.id_numero_orden
+      JOIN 
+        empleado e ON c.id_empleado = e.id_empleado
+      JOIN
+        menu mn ON d.id_plato = mn.id_plato
+      JOIN
+        mesa ms ON c.id_mesa = ms.id_mesa
+      JOIN
+        estado est ON c.id_estado = est.id_estado
+      ORDER BY c.fecha_pedido DESC`
+
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al obtener las comandas con detalles');
+  }
+});
+
+app.get('/comandas3', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        d.id_detalle,
+        d.id_numero_orden,
+        e.nombre AS nombre_empleado,
+        mn.nombre_plato,
+        ms.numero AS numero_mesa,
+        d.cantidad,
+        d.id_estado AS estado_detalle,
+        c.fecha_pedido,
+        c.fecha_entrega,
+        c.detalles
+      FROM detalle d
+      JOIN
+        comanda c ON d.id_numero_orden = c.id_numero_orden
+      JOIN 
+        empleado e ON c.id_empleado = e.id_empleado
+      JOIN
+        menu mn ON d.id_plato = mn.id_plato
+      JOIN
+        mesa ms ON c.id_mesa = ms.id_mesa
+      ORDER BY id_detalle ASC`);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al obtener detalles');
+}
+});
+
+//guardar fecha de entrega comanda
+app.put('/comandas3/:id', async (req, res) => {
+  const { id } = req.params;
+  const { estado_detalle } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE detalle 
+       SET id_estado = $1
+       WHERE id_detalle = $2 RETURNING *`, 
+      [estado_detalle, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "Comanda no encontrada" });
+    }
+
+    res.json({ message: "Estado actualizado correctamente", comanda: result.rows[0] });
+  } catch (error) {
+    console.error("Error al actualizar la comanda:", error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+});
+
+
+
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);
 });
