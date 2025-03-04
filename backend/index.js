@@ -381,7 +381,9 @@ app.get('/comandas/pagar', async (req, res) => {
         FROM detalle d
         WHERE d.id_numero_orden = c.id_numero_orden
         AND d.id_estado NOT IN (3, 6)
-      );`
+        
+      )
+      AND c.id_estado <> 5;`
     );
     res.json(result.rows);
   } catch (err) {

@@ -509,7 +509,7 @@ const RegistroComanda = () => {
                       type="button"
                       className="btn btn-success mx-2"
                       onClick={() => { setIdNumeroOrden(comanda.id_numero_orden); setPopUp(true); }}>
-                      Pagar
+                      Factura
                     </button>
                     </td>
                   </tr>
@@ -521,7 +521,8 @@ const RegistroComanda = () => {
       <FacturaPopUp 
         popUp={popUp} 
         closePopUp={() => setPopUp(false)} 
-        idNumeroOrden={idNumeroOrden} 
+        idNumeroOrden={idNumeroOrden}
+        actualizarComandas={obtenerComandasListas}
       />
     </div>
   );
