@@ -537,7 +537,7 @@ app.put('/detalle/:id_detalle', async (req, res) => {
       UPDATE comanda
       SET fecha_entrega = CURRENT_TIMESTAMP - INTERVAL '3 hours'
       WHERE id_numero_orden = (
-          SELECT id_numero_orden FROM detalle WHERE id_detalle = $1
+        SELECT id_numero_orden FROM detalle WHERE id_detalle = $1
       )
       RETURNING *;
     `;
@@ -545,6 +545,27 @@ app.put('/detalle/:id_detalle', async (req, res) => {
       const result = await pool.query(query2, values2);
 
       res.status(200).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al actualizar el detalle');
+  }
+});
+
+app.put('/detalle', async (req, res) => {
+  const {id_numero_orden} = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE detalle
+       SET id_estado = 5
+       WHERE id_numero_orden = $1
+       AND id_estado <> 6
+       RETURNING *;
+       `,
+       [id_numero_orden]
+    );
+
+    res.json(result.rows);
   } catch (err) {
     console.error(err);
     res.status(500).send('Error al actualizar el detalle');
@@ -567,8 +588,27 @@ app.get('/comandas/pagar', async (req, res) => {
         FROM detalle d
         WHERE d.id_numero_orden = c.id_numero_orden
         AND d.id_estado NOT IN (3, 6)
-         )
-      AND c.id_estado <> 5;`
+       )
+       AND c.id_estado NOT IN (5, 6);`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al obtener las comandas');
+  }
+});
+
+app.get('/comandas/pagar1', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        c.id_numero_orden,
+        e.nombre || ' ' || e.apellido AS nombre_empleado,
+        c.id_mesa,
+        c.id_estado
+       FROM comanda c
+       JOIN empleado e ON c.id_empleado = e.id_empleado
+       WHERE c.id_estado NOT IN(5,6);`
     );
     res.json(result.rows);
   } catch (err) {
@@ -585,7 +625,8 @@ app.get('/ventas/:id_numero_orden', async (req, res) => {
     SELECT 
         d.id_detalle,
         e.nombre || ' ' || e.apellido AS nombre_empleado,
-        c.id_mesa AS numero_mesa, 
+        c.id_mesa AS numero_mesa,
+        d.id_estado,
         d.cantidad,
         m.nombre_plato,
         m.precio_unitario,
@@ -594,8 +635,7 @@ app.get('/ventas/:id_numero_orden', async (req, res) => {
     JOIN menu m ON d.id_plato = m.id_plato
     JOIN comanda c ON d.id_numero_orden = c.id_numero_orden
     JOIN empleado e ON c.id_empleado = e.id_empleado
-    WHERE d.id_numero_orden = $1;
-    `;
+    WHERE d.id_numero_orden = $1 AND d.id_estado != 6;`;
 
     const result = await pool.query(query, [id_numero_orden]);
 
@@ -647,6 +687,7 @@ app.post('/ventas', async (req, res) => {
       res.status(500).json({error: error.message});
   }
 });
+
 
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);

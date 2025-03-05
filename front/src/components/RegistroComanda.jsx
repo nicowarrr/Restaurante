@@ -29,11 +29,10 @@ const RegistroComanda = () => {
   const [comandas, setComandas] = useState([]);
   const [filteredComandas, setFilteredComanda] = useState([]);
   const [detallesPreparacion, setDetallesPreparacion] = useState([]);
-  const [detallesEntregadas, setDetallesEntregadas] = useState([]);
   const [pagarComanda, setPagarComanda] = useState([]);
   const [popUp, setPopUp] = useState(false);
-  const [idNumeroOrden, setIdNumeroOrden] = useState(null);
-  
+  const [idNumeroOrden, setIdNumeroOrden] = useState(null);  
+  const [comandaEditada, setComandaEditada] = useState(null);
 
   const cargarEmpleados = async () => {
     try {
@@ -135,8 +134,10 @@ const RegistroComanda = () => {
       console.log("Respuesta de la API:", response.data);
       if (response.status === 200) {
         // Filtrar comandas según el estado
-        setDetallesPreparacion(response.data.filter(detalle => detalle.estado_detalle === 2 || detalle.estado_detalle === 3)); // Lista para servir
-        // Entregada
+        setDetallesPreparacion(response.data.filter(detalle => (
+          detalle.estado_detalle === 2 || 
+          detalle.estado_detalle === 3)
+        ));
       }
     } catch (error) {
       console.error("Error al obtener comandas:", error);
@@ -145,7 +146,7 @@ const RegistroComanda = () => {
 
   const obtenerComandasListas = async () => {
     try {
-      const response = await Axios.get('http://localhost:5001/comandas/pagar');
+      const response = await Axios.get('http://localhost:5001/comandas/pagar1');
       console.log("Respuesta de la API:", response.data);
       if (response.status === 200) {
         setPagarComanda(response.data);
@@ -174,52 +175,43 @@ const RegistroComanda = () => {
 
   const onSubmit = async (data) => {
     if (!selectedMesero?.value) {
-      Swal.fire({
-        title: "Error",
-        text: "Por favor selecciona mesero.",
-        icon: "error",
-      });
+      Swal.fire({ title: "Error", text: "Seleccione un mesero.", icon: "error" });
       return;
     }
-
+  
     try {
-      const comandaResponse = await Axios.post("http://localhost:5001/comandas", {
-        id_empleado: selectedMesero?.value,
-        id_mesa: mesaSeleccionada,
-        id_estado: 4,
-        detalles: data.detalles || "//",
-      });
-
-      const numeroOrden = comandaResponse.data.id_numero_orden;
-
+      let numeroOrden = comandaEditada ? comandaEditada.id_numero_orden : null;
+  
+      if (!comandaEditada) {
+        // Si es una nueva comanda, primero la crea
+        const comandaResponse = await Axios.post("http://localhost:5001/comandas", {
+          id_empleado: selectedMesero.value,
+          id_mesa: mesaSeleccionada,
+          id_estado: 4,
+          detalles: data.detalles || "//",
+        });
+  
+        numeroOrden = comandaResponse.data.id_numero_orden;
+      }
+  
+      // Enviar los detalles
       for (const item of orden) {
-        const detalleData = {
+        await Axios.post("http://localhost:5001/detalle", {
           id_plato: item.id_plato,
           id_numero_orden: numeroOrden,
           cantidad: item.cantidad,
           id_estado: 1,
-      };
-      await Axios.post("http://localhost:5001/detalle", detalleData);
+        });
+      }
   
-    }
-    Swal.fire({
-      title: "Éxito",
-      text: "Comanda(s) enviada(s) correctamente.",
-      icon: "success",
-    });
-    obtenerDetalles();
-    handleReset();
-
-  } catch (error) {
-    console.error("Error al enviar la comanda:", error);
-    console.log("fallo", data);
-    Swal.fire({
-      title: "Error",
-      text: "Ocurrió un problema al enviar la comanda. Intente nuevamente.",
-      icon: "error",
-    });
-  }
-  };
+      Swal.fire({ title: "Éxito", text: "Comanda actualizada.", icon: "success" });
+      obtenerDetalles();
+      handleReset();
+    } catch (error) {
+      console.error("Error al enviar comanda:", error);
+      Swal.fire({ title: "Error", text: "Hubo un problema.", icon: "error" });
+    }
+  };
 
   const handleReset = () => {
     reset(); // Resetea el formulario
@@ -307,20 +299,26 @@ const RegistroComanda = () => {
   const closePopUp = () => {
       setPopUp(false);
   };
-
-  // const pagarUnaComanda = async (id_numero_orden) => { 
-  //   try {
-  //     const response = await Axios.post('http://localhost:5001/ventas')
-  //     if response.status === 200 {
-
-  //     }
-
-
-  //     openPopUp();
-  //   } catch (error) {
-  //     console.error("Error al pagar la comanda:", error);
-  //   }
-  // };
+  const editarComanda = (comanda) => {
+    setComandaEditada(comanda);
+    setSelectedMesero({
+      value: comanda.id_empleado,
+      label: comanda.nombre_empleado
+    });
+    setMesaSeleccionada(comanda.id_mesa);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Obtener los detalles de la comanda
+    Axios.get(`http://localhost:5001/detalle/${comanda.id_numero_orden}`)
+      .then(response => {
+        setOrden(response.data.map(item => ({
+          id_plato: item.id_plato,
+          menu: item.nombre_plato,
+          cantidad: item.cantidad
+        })));
+      })
+      .catch(error => console.error("Error al obtener detalles:", error));
+    };
 
   return (
     <div className="container mt-4 p-4 rounded shadow bg-light">
@@ -511,6 +509,13 @@ const RegistroComanda = () => {
                       onClick={() => { setIdNumeroOrden(comanda.id_numero_orden); setPopUp(true); }}>
                       Factura
                     </button>
+                    <button
+                      type="button"
+                      className="btn btn-success mx-2"
+                      onClick={() => editarComanda(comanda)}
+                    >
+                      Editar
+                    </button>
                     </td>
                   </tr>
                 ))}
@@ -523,6 +528,10 @@ const RegistroComanda = () => {
         closePopUp={() => setPopUp(false)} 
         idNumeroOrden={idNumeroOrden}
         actualizarComandas={obtenerComandasListas}
+        detallesPreparacion={detallesPreparacion}
+        setDetallesPreparacion={setDetallesPreparacion}
+        actualizarDetalle1={obtenerDetalles}
+
       />
     </div>
   );
