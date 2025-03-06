@@ -77,7 +77,6 @@ const ComandasLista = () => {
           <input
             type="date"
             id="fecha"
-            className="form-control"
             className="fecha-container"
             style={{ width: "150px", fontSize: "18px", padding: "5px", textAlign: "center" }}
             value={fechaSeleccionada}

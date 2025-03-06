@@ -481,8 +481,9 @@ app.get('/comandas4', async (req, res) => {
         d.id_detalle,
         d.id_numero_orden,
         c.id_estado,
+        mn.precio_unitario,
         est.nombre_estado AS estado,
-        e.nombre || ' ' || e.apellido AS nombre_empleado,
+        CONCAT(e.nombre, ' ', e.apellido) AS nombre_empleado,
         mn.nombre_plato,
         ms.numero AS numero_mesa,
         d.cantidad,
@@ -501,7 +502,7 @@ app.get('/comandas4', async (req, res) => {
         mesa ms ON c.id_mesa = ms.id_mesa
       JOIN
         estado est ON c.id_estado = est.id_estado
-      ORDER BY c.fecha_pedido DESC`
+      ORDER BY c.id_numero_orden ASC`
 
     );
     res.json(result.rows);
