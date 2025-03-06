@@ -5,92 +5,91 @@ const ComandasCocina = () => {
   const [comandas, setComandas] = useState([]);
   const [comandasPreparacion, setComandasPreparacion] = useState([]);
   const [comandasEntregadas, setComandasEntregadas] = useState([]);
+  const [isUserActive, setIsUserActive] = useState(true);
 
-  // Obtener las comandas al cargar el componente
   useEffect(() => {
     const obtenerComandas = async () => {
       try {
-        const response = await Axios.get('http://localhost:5001/comandas');
+        const response = await Axios.get("http://localhost:5001/comandas3");
         console.log("Respuesta de la API:", response.data);
-        if (response.status === 200) {
-          // Filtrar comandas según el estado
-          setComandas(response.data.filter(comanda => comanda.estado === 0)); // Solo comandas no listas
-          setComandasPreparacion(response.data.filter(comanda => comanda.estado === 1)); // Solo comandas listas
-          setComandasEntregadas(response.data.filter(comanda => comanda.estado === 2)); // Solo comandas listas
+        if (response.status === 200 && Array.isArray(response.data)) {
+          setComandas(response.data.filter(comanda => comanda.estado_detalle === 1)); // En preparación
+          setComandasPreparacion(response.data.filter(comanda => comanda.estado_detalle === 2)); // Listas
+          setComandasEntregadas(response.data.filter(comanda => comanda.estado_detalle === 3)); // Entregadas
         }
       } catch (error) {
         console.error("Error al obtener comandas:", error);
       }
     };
     obtenerComandas();
+
+    let interval = setInterval(() => {
+      if (!isUserActive) {
+        obtenerComandas();
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [isUserActive]);
+
+  useEffect(() => {
+    let activityTimeout;
+
+    const resetActivity = () => {
+      setIsUserActive(true);
+      clearTimeout(activityTimeout);
+      activityTimeout = setTimeout(() => setIsUserActive(false), 30000);
+    };
+
+    window.addEventListener("mousemove", resetActivity);
+    window.addEventListener("keydown", resetActivity);
+    window.addEventListener("scroll", resetActivity);
+
+    activityTimeout = setTimeout(() => setIsUserActive(false), 30000);
+
+    return () => {
+      window.removeEventListener("mousemove", resetActivity);
+      window.removeEventListener("keydown", resetActivity);
+      window.removeEventListener("scroll", resetActivity);
+      clearTimeout(activityTimeout);
+    };
   }, []);
 
-  
-
-  // Función para eliminar la comanda
-const eliminarPorID = async (id) => {
-  try {
-    const response = await Axios.delete(`http://localhost:5001/comandas/${id}`);
-    if (response.status === 200) {
-      // Filtrar las comandas eliminadas de ambas listas (no listas y listas)
-      const nuevasComandas = comandas.filter(comanda => comanda.id_numero_orden !== id);
-      const nuevasComandasPreparacion = comandasPreparacion.filter(comanda => comanda.id_numero_orden !== id);
-
-      // Actualizar el estado de las comandas
-      setComandas(nuevasComandas);
-      setComandasPreparacion(nuevasComandasPreparacion);
-
-      console.log("Comanda eliminada correctamente");
-    }
-  } catch (error) {
-    console.error("Error al eliminar comanda:", error);
-  }
-};
-
-
-  // Función para cambiar el estado de la comanda
   const cambiarEstadoComanda = async (id, nuevoEstado) => {
     try {
-      const response = await Axios.put(`http://localhost:5001/comandas/${id}`, { estado: nuevoEstado });
-      if (response.status === 200) {
-        // Actualizar la lista de comandas
-        const updatedComandas = comandas.map(comanda =>
-          comanda.id_numero_orden === id ? { ...comanda, estado: nuevoEstado } : comanda
-        );
-        setComandas(updatedComandas);
-
-        // Si la comanda pasa a lista, moverla a la lista de comandas preparadas
-        if (nuevoEstado === 1) {
-          const comandaMovida = updatedComandas.find(comanda => comanda.id_numero_orden === id);
-          setComandasPreparacion([...comandasPreparacion, comandaMovida]);
-          setComandas(updatedComandas.filter(comanda => comanda.id_numero_orden !== id));
-        } else {
-          const comandaMovida = updatedComandas.find(comanda => comanda.id_numero_orden === id);
-          setComandasPreparacion(comandasPreparacion.filter(comanda => comanda.id_numero_orden !== id));
-          setComandas([...comandas, comandaMovida]);
-        }
+      const requestBody = { estado_detalle: nuevoEstado };
+      if (nuevoEstado === 3) {
+        requestBody.fecha_entrega = new Date().toISOString().slice(0, 19).replace("T", " ");
       }
-      
+      await Axios.put(`http://localhost:5001/comandas3/${id}`, requestBody);
+
+      setComandas(prev => prev.filter(comanda => comanda.id_detalle !== id));
+      setComandasPreparacion(prev => prev.filter(comanda => comanda.id_detalle !== id));
+      setComandasEntregadas(prev => prev.filter(comanda => comanda.id_detalle !== id));
+
+      if (nuevoEstado === 2) {
+        setComandasPreparacion(prev => [...prev, { id_detalle: id, estado_detalle: 2 }]);
+      } else if (nuevoEstado === 3) {
+        setComandasEntregadas(prev => [...prev, { id_detalle: id, estado_detalle: 3, fecha_entrega: requestBody.fecha_entrega }]);
+      }
     } catch (error) {
       console.error("Error al cambiar el estado de la comanda:", error);
     }
-    
   };
 
+  
   const marcarComandaEntregada = async (id) => {
     try {
-      const response = await Axios.put(`http://localhost:5001/comandas/${id}`, { estado: 2 });
+      const fechaEntrega = new Date().toISOString().slice(0, 19).replace("T", " ");
+  
+      const response = await Axios.put(`http://localhost:5001/comandas3/${id}`, { 
+        estado_detalle: 3, 
+        fecha_entrega: fechaEntrega 
+      });
+  
       if (response.status === 200) {
-        // Buscar la comanda en la lista de comandasPreparacion
-        const comandaMovida = comandasPreparacion.find(comanda => comanda.id_numero_orden === id);
-        
-        if (comandaMovida) {
-          // Actualizar el estado de la comanda y moverla a comandasEntregadas
-          setComandasPreparacion(comandasPreparacion.filter(comanda => comanda.id_numero_orden !== id));
-          setComandasEntregadas(prev => [...prev, { ...comandaMovida, estado: 2 }]);
-        } else {
-          console.error("Comanda no encontrada en comandasPreparacion");
-        }
+        setComandasPreparacion(prev => prev.filter(comanda => comanda.id_detalle !== id));
+        setComandasEntregadas(prev => [...prev, { ...response.data.comanda, estado_detalle: 3, fecha_entrega: fechaEntrega }]);
       }
     } catch (error) {
       console.error("Error al marcar la comanda como entregada:", error);
@@ -99,10 +98,8 @@ const eliminarPorID = async (id) => {
   
   
 
-
   return (
     <div className="container mt-4">
-      {/* Comandas en Cocina (No listas) */}
       <h2>Comandas en Preparación</h2>
       <table className="table table-bordered mt-3">
         <thead className="table-dark">
@@ -114,14 +111,15 @@ const eliminarPorID = async (id) => {
             <th>Cantidad</th>
             <th>Detalles</th>
             <th>Acciones</th>
+            
           </tr>
         </thead>
         <tbody>
-          {comandas.map((comanda, index) => (
-            <tr key={index}>
+          {comandas.map((comanda) => (
+            <tr key={comanda.estado_detalle}>
               <td>
-                Fecha: {comanda.fecha_pedido.slice(0,10)}<br />
-                Hora: {comanda.fecha_pedido.slice(11,19)}
+                Fecha: {comanda.fecha_pedido?.slice(0, 10)}<br />
+                Hora: {comanda.fecha_pedido?.slice(11, 19)}
               </td>
               <td>{comanda.nombre_empleado}</td>
               <td>{comanda.numero_mesa}</td>
@@ -129,26 +127,17 @@ const eliminarPorID = async (id) => {
               <td>{comanda.cantidad}</td>
               <td>{comanda.detalles}</td>
               <td>
-                <button
-                  className="btn btn-success mx-2"
-                  onClick={() => cambiarEstadoComanda(comanda.id_numero_orden, 1)}
-                >
+                <button className="btn btn-success mx-2" 
+                  onClick={() => cambiarEstadoComanda(comanda.id_detalle, 2)}>
                   Comanda Lista
                 </button>
-                <button
-                className="btn btn-danger mx-2"
-                onClick={() => eliminarPorID(comanda.id_numero_orden)}
-              >
-                Eliminar
-              </button>
               </td>
             </tr>
           ))}
         </tbody>
-      </table>      
+      </table>
     </div>
   );
 };
 
 export default ComandasCocina;
-
