@@ -5,16 +5,18 @@ import '../styles/ListaPedido.css';
 const ComandasLista = () => {
   const [comandas, setComandas] = useState([]);
   const [fechaSeleccionada, setFechaSeleccionada] = useState("");
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [comandasPorPagina, setComandasPorPagina] = useState(10);
 
   useEffect(() => {
     const obtenerComandas = async () => {
       try {
-        const response = await Axios.get("http://localhost:5001/comandas2");
+        const response = await Axios.get("http://localhost:5001/comandas4");
         if (response.status === 200) {
           const comandasFiltradas = response.data.filter(comanda => 
             new Date(comanda.fecha_pedido).toISOString().split("T")[0] === fechaSeleccionada
           );
-          setComandas([...comandasFiltradas]);
+          setComandas(comandasFiltradas);
         }
       } catch (error) {
         console.error("Error al obtener comandas:", error);
@@ -25,6 +27,22 @@ const ComandasLista = () => {
       obtenerComandas();
     }
   }, [fechaSeleccionada]);
+
+  // Función para obtener los comandas actuales según la página
+  const indexOfLastComanda = paginaActual * comandasPorPagina;
+  const indexOfFirstComanda = indexOfLastComanda - comandasPorPagina;
+  const comandasPaginaActual = comandas.slice(indexOfFirstComanda, indexOfLastComanda);
+
+  // Cambiar página
+  const paginate = (pagina) => setPaginaActual(pagina);
+
+  // Total de páginas
+  const totalPaginas = Math.ceil(comandas.length / comandasPorPagina);
+
+  // Determinar el rango de páginas visibles (por ejemplo, 5 páginas a la vez)
+  const pagesToShow = 5;
+  const startPage = Math.max(1, paginaActual - Math.floor(pagesToShow / 2));
+  const endPage = Math.min(totalPaginas, startPage + pagesToShow - 1);
 
   const formatTiempoEntrega = (fechaPedido, fechaEntrega) => {
     if (!fechaEntrega) return "No entregado";
@@ -53,18 +71,20 @@ const ComandasLista = () => {
         )}
       </div>
 
-      {/* Selector de fecha */}
-      {/* Selector de fecha */}
       <div className="mb-3">
         <label htmlFor="fecha" className="form-label">Selecciona una fecha:</label>
-        <input
-          type="date"
-          id="fecha"
-          className="form-control"
-          value={fechaSeleccionada}
-          onChange={(e) => setFechaSeleccionada(e.target.value)}
-          max={new Date().toISOString().split("T")[0]}
-        />
+        <div >
+          <input
+            type="date"
+            id="fecha"
+            className="form-control"
+            className="fecha-container"
+            style={{ width: "150px", fontSize: "18px", padding: "5px", textAlign: "center" }}
+            value={fechaSeleccionada}
+            onChange={(e) => setFechaSeleccionada(e.target.value)}
+            max={new Date().toISOString().split("T")[0]}
+          />
+        </div>
       </div>
 
       <table className="table table-bordered mt-3">
@@ -78,17 +98,17 @@ const ComandasLista = () => {
             <th>Hora Pedido</th>
             <th>Hora Entrega</th>
             <th>Tiempo Entrega</th>
+            <th>Estado</th>
           </tr>
         </thead>
         <tbody>
-          {comandas.length > 0 ? (
-            comandas.map((comanda, index) => (
+          {comandasPaginaActual.length > 0 ? (
+            comandasPaginaActual.map((comanda, index) => (
               <tr key={index}>
                 <td>{comanda.id_numero_orden}</td>
-                <td>{comanda.nombre_empleado}</td>
+                <td>{comanda.nombre_empleado} {comanda.apellido}</td>
                 <td>{comanda.numero_mesa}</td>
-                <td>{comanda.nombre_plato}</td>
-                <td>{comanda.detalles}</td>
+                <td>{comanda.nombre_plato} - {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(comanda.precio_unitario)}</td>
                 <td>{comanda.cantidad}</td>
                 <td>{comanda.fecha_pedido.slice(11, 19)}</td>
                 <td>{comanda.fecha_entrega ? comanda.fecha_entrega.slice(11, 19) : "No entregado"}</td>
@@ -98,7 +118,7 @@ const ComandasLista = () => {
             ))
           ) : (
             <tr>
-              <td colSpan="9" className="text-center">
+              <td colSpan="10" className="text-center">
                 No hay comandas entregadas en esta fecha
               </td>
             </tr>
