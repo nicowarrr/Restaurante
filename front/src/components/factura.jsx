@@ -33,8 +33,11 @@ const FacturaPopUp = ({
           });
         })
         .catch((error) => console.error("Error al obtener la factura:", error));
-    }
+      }
+
   }, [popUp, idNumeroOrden]);
+
+  
 
   const generarPDF = () => {
     if (!factura) return;
@@ -66,14 +69,14 @@ const FacturaPopUp = ({
     doc.text(`Total: $${factura.totalFactura}`, 100, y + 10);
     doc.setFontSize(10);
     doc.setFont("courier", "normal");
-    doc.text("El IVA de la Boleta: $988", 80, y + 15);
+    doc.text(`El IVA de la Boleta: $${Math.round(factura.totalFactura*0.19)}`, 77, y + 15);
     doc.setFontSize(12);
     doc.text("-------------------------------------------------", 10, y + 20);
     doc.setFontSize(10);
     doc.text("Timbre Electronico SII", 10, y + 25);
-    doc.text("Res.74 de 2020", 10, y + 30);
+    doc.text("Res.74 de 2025", 10, y + 30);
     doc.text("DTE Generada con Rjc Software", 10, y + 35);
-    doc.save(`Factura ${idNumeroOrden}.pdf`);
+    doc.save(`Boleta ${idNumeroOrden}.pdf`);
   };
 
   const marcarBoletaPagada = async (id_numero_orden) => {
