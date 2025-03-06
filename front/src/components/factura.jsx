@@ -123,7 +123,7 @@ const FacturaPopUp = ({
         <div className="modal-dialog" role="document">
           <div className="modal-content">
             <div className="modal-header">
-              <h5 className="modal-title">Factura</h5>
+              <h5 className="modal-title">Boleta</h5>
               <button
                 type="button"
                 className="btn-close"
