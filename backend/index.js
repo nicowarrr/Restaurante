@@ -30,6 +30,7 @@ pool.connect()
     process.exit(1); // Salir con error si no se puede conectar
   });
 
+
 // Rutas API
 
 // Obtener todos los empleados
@@ -518,7 +519,7 @@ app.get('/comandas4', async (req, res) => {
   }
 });
 
->>>>>>> Stashed changes
+
 app.get('/detalle', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM detalle ORDER BY id_detalle ASC');
