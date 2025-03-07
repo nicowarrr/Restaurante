@@ -589,7 +589,14 @@ app.get('/comandas/pagar', async (req, res) => {
         WHERE d.id_numero_orden = c.id_numero_orden
         AND d.id_estado NOT IN (3, 6)
        )
-       AND c.id_estado NOT IN (5, 6);`
+       AND c.id_estado NOT IN (5, 6)
+       AND NOT EXISTS (
+        SELECT 1
+        FROM detalle d
+        WHERE d.id_numero_orden = c.id_numero_orden
+        GROUP BY d.id_numero_orden
+        HAVING COUNT(DISTINCT d.id_estado) = 1 AND MAX(d.id_estado) = 6
+      );`
     );
     res.json(result.rows);
   } catch (err) {
@@ -608,7 +615,14 @@ app.get('/comandas/pagar1', async (req, res) => {
         c.id_estado
        FROM comanda c
        JOIN empleado e ON c.id_empleado = e.id_empleado
-       WHERE c.id_estado NOT IN(5,6);`
+       WHERE c.id_estado NOT IN(5,6)
+       AND NOT EXISTS (
+        SELECT 1
+        FROM detalle d
+        WHERE d.id_numero_orden = c.id_numero_orden
+        GROUP BY d.id_numero_orden
+        HAVING COUNT(DISTINCT d.id_estado) = 1 AND MAX(d.id_estado) = 6
+      );`
     );
     res.json(result.rows);
   } catch (err) {
@@ -688,6 +702,59 @@ app.post('/ventas', async (req, res) => {
   }
 });
 
+app.get('/comandas4', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        d.id_detalle,
+        d.id_numero_orden,
+        c.id_estado,
+        est.nombre_estado AS estado,
+        CONCAT(e.nombre, ' ', e.apellido ) AS nombre_empleado,
+        mn.nombre_plato,
+        ms.numero AS numero_mesa,
+        d.cantidad,
+        c.fecha_pedido,
+        mn.precio_unitario,
+        c.fecha_entrega,
+        COALESCE(c.detalles, 'Sin detalles') AS detalles
+      FROM 
+        detalle d
+      JOIN 
+        comanda c ON d.id_numero_orden = c.id_numero_orden
+      JOIN 
+        empleado e ON c.id_empleado = e.id_empleado
+      JOIN
+        menu mn ON d.id_plato = mn.id_plato
+      JOIN
+        mesa ms ON c.id_mesa = ms.id_mesa
+      JOIN
+        estado est ON c.id_estado = est.id_estado
+      ORDER BY c.id_numero_orden ASC`
+
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al obtener las comandas con detalles');
+  }
+});
+
+app.get('/detalle/:id_numero_orden', async (req, res) => {
+  const {id_numero_orden} = req.params;
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM detalle WHERE id_numero_orden = $1", 
+      [id_numero_orden]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al obtener detalles');
+  }
+});
 
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);

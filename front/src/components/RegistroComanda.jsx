@@ -33,6 +33,7 @@ const RegistroComanda = () => {
   const [popUp, setPopUp] = useState(false);
   const [idNumeroOrden, setIdNumeroOrden] = useState(null);  
   const [comandaEditada, setComandaEditada] = useState(null);
+  const [botonHabilitado, setBotonHabilitado] = useState(false);
 
   const cargarEmpleados = async () => {
     try {
@@ -169,12 +170,12 @@ const RegistroComanda = () => {
         console.error("Error al cargar datos iniciales:", error);
       }
     };
-
+    
     cargarDatosIniciales();
   }, []);
 
   const onSubmit = async (data) => {
-    if (!selectedMesero?.value) {
+    if (!selectedMesero) {
       Swal.fire({ title: "Error", text: "Seleccione un mesero.", icon: "error" });
       return;
     }
@@ -188,7 +189,7 @@ const RegistroComanda = () => {
           id_empleado: selectedMesero.value,
           id_mesa: mesaSeleccionada,
           id_estado: 4,
-          detalles: data.detalles || "//",
+          detalles: data.detalles || "Sin Detalles",
         });
   
         numeroOrden = comandaResponse.data.id_numero_orden;
@@ -206,12 +207,13 @@ const RegistroComanda = () => {
   
       Swal.fire({ title: "Éxito", text: "Comanda actualizada.", icon: "success" });
       obtenerDetalles();
+      obtenerComandasListas();
       handleReset();
     } catch (error) {
       console.error("Error al enviar comanda:", error);
-      Swal.fire({ title: "Error", text: "Hubo un problema.", icon: "error" });
-    }
-  };
+      Swal.fire({ title: "Error", text: "Hubo un problema.", icon: "error" });
+    }
+  };
 
   const handleReset = () => {
     reset(); // Resetea el formulario
@@ -308,17 +310,41 @@ const RegistroComanda = () => {
     setMesaSeleccionada(comanda.id_mesa);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
-    // Obtener los detalles de la comanda
-    Axios.get(`http://localhost:5001/detalle/${comanda.id_numero_orden}`)
-      .then(response => {
-        setOrden(response.data.map(item => ({
-          id_plato: item.id_plato,
-          menu: item.nombre_plato,
-          cantidad: item.cantidad
-        })));
-      })
-      .catch(error => console.error("Error al obtener detalles:", error));
-    };
+  };
+  
+  const verificarYAbrirPopUp = async (numeroOrden) => {
+    try {
+      const response = await Axios.get(
+        `http://localhost:5001/detalle/${numeroOrden}`
+      );
+  
+      // Verificar si todos los detalles cumplen la condición
+      const habilitado = response.data.every(
+        (detalle) => detalle.id_estado === 3 || detalle.id_estado === 6
+      );
+  
+      if (habilitado) {
+        setIdNumeroOrden(numeroOrden);
+        setPopUp(true);
+      } else {
+        Swal.fire({
+          title: "Atención",
+          text: "Los platos deben estar entregados o cancelados para generar una boleta.",
+          icon: "warning",
+          confirmButtonText: "Aceptar",
+        });
+      }
+    } catch (error) {
+      console.error("Error al obtener detalles:", error);
+      Swal.fire({
+        title: "Error",
+        text: "Hubo un error al verificar la comanda.",
+        icon: "error",
+        confirmButtonText: "Aceptar",
+      });
+    }
+  };
+  
 
   return (
     <div className="container mt-4 p-4 rounded shadow bg-light">
@@ -506,8 +532,9 @@ const RegistroComanda = () => {
                     <button
                       type="button"
                       className="btn btn-success mx-2"
-                      onClick={() => { setIdNumeroOrden(comanda.id_numero_orden); setPopUp(true); }}>
-                      Factura
+                      onClick={() => { setIdNumeroOrden(comanda.id_numero_orden); verificarYAbrirPopUp(comanda.id_numero_orden); }}
+                      >
+                      Boleta
                     </button>
                     <button
                       type="button"
