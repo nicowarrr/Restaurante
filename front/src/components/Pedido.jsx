@@ -99,7 +99,7 @@ const ComandasCocina = () => {
   
 
   return (
-    <div className="container mt-4">
+    <div className="container mt-4 table-responsive" >
       <h2>Comandas en Preparación</h2>
       <table className="table table-bordered mt-3">
         <thead className="table-dark">
@@ -136,46 +136,6 @@ const ComandasCocina = () => {
           ))}
         </tbody>
       </table>
-
-      {/* <h2>Comandas Listas</h2>
-      <table className="table table-bordered mt-3">
-        <thead className="table-dark">
-          <tr>
-            <th>Fecha</th>
-            <th>Mesero</th>
-            <th>Mesa</th>
-            <th>Pedido</th>
-            <th>Cantidad</th>
-            <th>Detalles</th>
-            <th>Hora Entrega</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {comandasPreparacion.map((comanda) => (
-            <tr key={comanda.id_detalle}>
-              <td>
-                Fecha: {comanda.fecha_pedido?.slice(0, 10)}<br />
-                Hora: {comanda.fecha_pedido?.slice(11, 19)}
-              </td>
-              <td>{comanda.nombre_empleado}</td>
-              <td>{comanda.numero_mesa}</td>
-              <td>{comanda.nombre_plato}</td>
-              <td>{comanda.cantidad}</td>
-              <td>{comanda.detalles}</td>
-              <td>{comanda.fecha_entrega ? comanda.fecha_entrega.slice(11, 19) : "No entregado"}</td>
-              <td>
-                <button
-                  className="btn btn-primary mx-2"
-                  onClick={() => marcarComandaEntregada(comanda.id_detalle)}
-                >
-                  Comanda Entregada
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table> */}
     </div>
   );
 };

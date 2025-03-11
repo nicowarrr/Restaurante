@@ -1,7 +1,7 @@
 .total-ventas {
     position: absolute;
-    top: 100px;
-    right: 120px;
+    top: 180px;
+    right: 80px;
     font-size: 18px;
     font-weight: bold;
     background-color: #bfbfbf; /* Fondo opcional */
@@ -64,4 +64,12 @@
     background-color: #ddd;
   }
   
-  
+  @media (max-width: 900px) {
+    .total-ventas {
+      margin-top: 60px;
+      right: 80px;
+      margin-right: 10px;
+      top: 100px;
+      right: 0px;
+    }
+  }

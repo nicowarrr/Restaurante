@@ -77,8 +77,7 @@ const ComandasLista = () => {
           <input
             type="date"
             id="fecha"
-            className="form-control"
-            className="fecha-container"
+            className="form-control fecha-container"
             style={{ width: "150px", fontSize: "18px", padding: "5px", textAlign: "center" }}
             value={fechaSeleccionada}
             onChange={(e) => setFechaSeleccionada(e.target.value)}
@@ -86,7 +85,7 @@ const ComandasLista = () => {
           />
         </div>
       </div>
-
+      <div className="table-responsive">
       <table className="table table-bordered mt-3">
         <thead className="table-dark">
           <tr>
@@ -125,7 +124,7 @@ const ComandasLista = () => {
           )}
         </tbody>
       </table>
-
+      </div>
       {/* Paginación */}
       <div className="pagination">
         <button 

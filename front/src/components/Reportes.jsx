@@ -14,7 +14,7 @@ const ReportesBI = () => {
             title="Power BI Report"
             width="100%"
             height="600px"
-            src="https://app.powerbi.com/reportEmbed?reportId=a26a1ff9-907b-4da3-ae3f-ea591f619d2f&autoAuth=true&ctid=38a1e0a1-b6b1-42e9-b3a9-597626670b17"
+            src="https://app.powerbi.com/view?r=eyJrIjoiZDRiZWZlNzUtMDgxYi00MGE0LWIzNTctODkwODgxODM1YWE1IiwidCI6IjM4YTFlMGExLWI2YjEtNDJlOS1iM2E5LTU5NzYyNjY3MGIxNyIsImMiOjR9"
             allowFullScreen>
           </iframe>
         </div>
